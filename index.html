@@ -33,7 +33,7 @@ dialog .btn{display:block;width:100%;margin:.45rem 0}
 #toast{position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);background:var(--tinta);color:var(--marfil);padding:.6rem 1rem;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 #toast.on{opacity:1}
 </style></head><body>
-<header><h1>PASamelo</h1><small id="who"></small><button class="ib" id="bCfg" title="Ajustes">⚙️</button></header>
+<header><h1>PASamelo</h1><small id="who"></small><button class="ib hide" id="bSync" style="font-size:.95rem" title="Cambios sin subir: tocá para subirlos"></button><button class="ib" id="bCfg" title="Ajustes">⚙️</button></header>
 <main>
  <section id="vLogin" class="card hide"><h2>Bienvenida/o</h2>
   <p>Tus datos quedan en tu propio Google Drive. PASamelo solo ve la hoja que crea o que elegís.</p>
@@ -44,9 +44,10 @@ dialog .btn{display:block;width:100%;margin:.45rem 0}
   <button class="btn sec" id="bElegir" title="Elegir una hoja que ya tenés">Elegir hoja existente</button></section>
  <section id="vInicio" class="card hide"><h2>Inicio</h2>
   <p>Hoja conectada: <a id="lHoja" target="_blank" rel="noopener" title="Abrir la hoja en Google Sheets">abrir</a></p>
-  <p class="muted">Próximamente: personas, pólizas, siniestros…</p></section>
+  <p class="muted" id="estado"></p><p class="muted" id="conteo"></p></section>
 </main>
 <dialog id="dCfg"><div class="top"><h2>Ajustes</h2><button class="ib" id="bCfgX" title="Cerrar">✕</button></div>
+ <button class="btn hide" id="bSyncNow" title="Subir los cambios pendientes y bajar lo último de la hoja">Sincronizar ahora</button>
  <button class="btn sec" id="bHoja2" title="Crear otra hoja o elegir una existente">Cambiar hoja</button>
  <button class="btn sec" id="bUpd" title="Borra la caché y recarga, sin tocar tus datos">Actualizar app</button>
  <button class="btn sec" id="bSalir" title="Cerrar sesión en este dispositivo">Cerrar sesión</button>
@@ -54,7 +55,7 @@ dialog .btn{display:block;width:100%;margin:.45rem 0}
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const APP_VERSION='2', SCHEMA=1,
+const APP_VERSION='3', SCHEMA=1,
  CLIENT_ID='562982844201-hitbnj8r42hi7es2fvlthl07ukrbg5pc.apps.googleusercontent.com',
  API_KEY='AIzaSyDF84n7vqE1BTyi4cTsaK8gsfHDIqGAcwE', APP_ID='562982844201',
  DRIVE='https://www.googleapis.com/auth/drive.file', SCOPE='openid email profile '+DRIVE,
@@ -110,8 +111,8 @@ function busy(b){for(const id of['bCrear','bElegir','bLogin'])$('#'+id).disabled
 
 /* ---- Token (GIS token client) ---- */
 const gsi=()=>new Promise(r=>{(function w(){window.google?.accounts?.oauth2?r():setTimeout(w,100)})()});
-async function token(){
- if(tok&&tok.exp-Date.now()>60000)return tok.access_token;
+async function token(force){
+ if(!force&&tok&&tok.exp-Date.now()>60000)return tok.access_token;
  await gsi();
  tc??=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPE,
   callback:r=>{if(r.error)return pend?.rej(r);
@@ -138,7 +139,7 @@ function start(){
  if(!user)return show('vLogin');
  const id=LS.get(sheetKey());id?abrir(id):show('vHoja');
 }
-function abrir(id){$('#lHoja').href='https://docs.google.com/spreadsheets/d/'+id;show('vInicio')}
+function abrir(id){$('#lHoja').href='https://docs.google.com/spreadsheets/d/'+id;show('vInicio');boot(id)}
 function conectar(id){LS.set(sheetKey(),id);abrir(id)}
 
 /* ---- Crear hoja nueva: todas las pestañas + encabezados + _cfg/_meta ocultas, en un solo pedido ---- */
@@ -186,6 +187,78 @@ async function asegurar(id){
  if(req.length)await api(`${SH}/${id}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:req})});
  if(vals.length)await api(`${SH}/${id}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:vals})});
 }
+
+/* ==== Paso 3a: copia local (IndexedDB) + cola + sincronización ==== */
+const idb=(()=>{let p;const open=()=>p??=new Promise((res,rej)=>{const r=indexedDB.open('pasamelo',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+ const tx=async(m,f)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('kv',m),r=f(t.objectStore('kv'));t.oncomplete=()=>res(r.result);t.onerror=()=>rej(t.error)})};
+ return{get:k=>tx('readonly',s=>s.get(k)),set:(k,v)=>tx('readwrite',s=>s.put(v,k))}})();
+const PREF={PERSONAS:'per',VINCULOS:'vin',OBJETOS:'obj',OBJETO_PERSONA:'op',POLIZAS:'pol',ENDOSOS:'end',SINIESTROS:'sin',SINIESTRO_PARTICIPANTES:'spa',RECLAMOS:'rec',SEGUIMIENTO:'not',COTIZACIONES:'cot',COT_ALTERNATIVAS:'alt',COT_CONCEPTOS:'con',COT_CONC_VALOR:'ccv',COMPANIAS:'cia',COBERTURAS:'cob',COBERTURA_ITEMS:'cit',COB_CATALOGO:'cat',LISTAS:'lis',LOCALIDADES:'loc',VENDEDORES:'ven',GESTORES:'ges'};
+const pk=t=>T[t].split(',')[0];
+const newId=t=>(PREF[t]||'id')+'_'+Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>(b%36).toString(36)).join('');
+let sid=null,D=null,saveT,syncT,syncing=false,lastRenew=0;
+const vacio=()=>({tabs:{},heads:{},cfg:null,sync:'',q:{},seq:0});
+const persist=()=>{clearTimeout(saveT);saveT=setTimeout(()=>sid&&idb.set('d:'+sid,D),300)};
+const pendientes=()=>D?Object.keys(D.q).length:0;
+const tokOk=()=>tok&&tok.exp-Date.now()>60000;
+async function boot(id){sid=id;D=(await idb.get('d:'+id))||vacio();paint();sync()}
+function mark(t,id,op){D.q[t+'|'+id]={op,n:++D.seq};persist();paint();clearTimeout(syncT);syncT=setTimeout(sync,1500)}
+/* API para los próximos pasos */
+const DB={list:t=>D?.tabs[t]||[],get:(t,id)=>DB.list(t).find(r=>r[pk(t)]==id),
+ save(t,r){const k=pk(t),now=hoy(),a=D.tabs[t]??=[];r={...r};r[k]||=newId(t);r.fecha_modificacion=now;
+  const i=a.findIndex(x=>x[k]==r[k]);if(i<0){r.fecha_creacion||=now;a.unshift(r)}else a[i]={...a[i],...r};mark(t,r[k],'up');return r},
+ del(t,id){const k=pk(t);D.tabs[t]=DB.list(t).filter(x=>x[k]!=id);mark(t,id,'del')}};
+function paint(){const n=pendientes(),b=$('#bSync');
+ b.classList.toggle('hide',!n&&!syncing);b.textContent=syncing?'⟳ …':'⟳ '+n;
+ $('#bSyncNow').classList.toggle('hide',!n);
+ if(!D)return;$('#estado').textContent=(navigator.onLine?'':'Sin conexión · ')+(D.sync?'Última sincronización: '+D.sync:'Todavía no se sincronizó')+(n?` · ${n} sin subir`:'');
+ $('#conteo').textContent=Object.keys(T).filter(t=>DB.list(t).length).map(t=>t.toLowerCase().replace(/_/g,' ')+': '+DB.list(t).length).join(' · ')||'La hoja está vacía.'}
+async function sync(interactive){
+ if(syncing||!sid||!navigator.onLine||(!interactive&&!tokOk()))return paint();
+ syncing=true;paint();
+ try{await push();await pull();const d=new Date();D.sync=hoy()+' '+d.toTimeString().slice(0,5);persist()}
+ catch(e){toast(errMsg(e))}
+ syncing=false;paint()}
+const meta=async()=>{const m=await api(`${SH}/${sid}?fields=sheets.properties(sheetId,title,gridProperties.columnCount)`);const o={};for(const s of m.sheets)o[s.properties.title]=s.properties;return o};
+const rng=ts=>ts.map(t=>'ranges='+encodeURIComponent(t)).join('&');
+async function push(){
+ const snap=Object.entries(D.q);if(!snap.length)return;
+ const por={};for(const[k,v]of snap){const[t,id]=k.split('|');(por[t]??={})[id]=v.op}
+ const tabs=Object.keys(por),M=await meta();
+ const hg=await api(`${SH}/${sid}/values:batchGet?`+rng(tabs.map(t=>`'${t}'!1:1`)));
+ const H={};tabs.forEach((t,i)=>H[t]=(hg.valueRanges[i].values||[[]])[0]||[]);
+ const pg=await api(`${SH}/${sid}/values:batchGet?`+rng(tabs.map(t=>{const c=colL(Math.max(0,H[t].indexOf(pk(t))));return`'${t}'!${c}2:${c}`})));
+ const req=[],vals=[];
+ tabs.forEach((t,i)=>{const g=M[t].sheetId,k=pk(t),ops=por[t];
+  let ids=(pg.valueRanges[i].values||[]).map(r=>String(r[0]??''));
+  const nuevasCols=[...new Set(Object.keys(ops).filter(id=>ops[id]==='up').flatMap(id=>Object.keys(DB.get(t,id)||{})))].filter(c=>!H[t].includes(c));
+  if(nuevasCols.length){const n=H[t].length+nuevasCols.length,cc=M[t].gridProperties.columnCount;
+   if(n>cc)req.push({appendDimension:{sheetId:g,dimension:'COLUMNS',length:n-cc}});
+   vals.push({range:`'${t}'!${colL(H[t].length)}1`,values:[nuevasCols]});H[t]=H[t].concat(nuevasCols)}
+  const borrar=ids.map((x,j)=>ops[x]==='del'?j:-1).filter(j=>j>=0).sort((a,b)=>b-a);
+  for(const j of borrar)req.push({deleteDimension:{range:{sheetId:g,dimension:'ROWS',startIndex:j+1,endIndex:j+2}}});
+  ids=ids.filter(x=>ops[x]!=='del');
+  const altas=Object.keys(ops).filter(id=>ops[id]==='up'&&!ids.includes(id)&&DB.get(t,id));
+  if(altas.length){req.push({insertDimension:{range:{sheetId:g,dimension:'ROWS',startIndex:1,endIndex:1+altas.length},inheritFromBefore:false}});ids=altas.concat(ids)}
+  for(const id of Object.keys(ops)){const r=DB.get(t,id);if(ops[id]!=='up'||!r)continue;const j=ids.indexOf(id);
+   vals.push({range:`'${t}'!A${j+2}`,values:[H[t].map(c=>r[c]??'')]})}
+ });
+ if(req.length)await api(`${SH}/${sid}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:req})});
+ if(vals.length)await api(`${SH}/${sid}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:vals})});
+ for(const[k,v]of snap)if(D.q[k]?.n===v.n)delete D.q[k];persist()}
+async function pull(){
+ const tabs=Object.keys(T),g=await api(`${SH}/${sid}/values:batchGet?`+rng(tabs.map(t=>`'${t}'`).concat("'_cfg'!A1")));
+ tabs.forEach((t,i)=>{const v=g.valueRanges[i].values||[],h=v[0]||[],k=pk(t);D.heads[t]=h;
+  const loc=Object.fromEntries(DB.list(t).map(r=>[r[k],r]));
+  const rows=v.slice(1).map(f=>Object.fromEntries(h.map((c,j)=>[c,f[j]??'']))).filter(r=>r[k]!=='');
+  const out=[];for(const id in loc)if(D.q[t+'|'+id]?.op==='up'&&!rows.some(r=>r[k]==id))out.push(loc[id]);
+  for(const r of rows){const q=D.q[t+'|'+r[k]];if(q?.op==='del')continue;out.push(q?.op==='up'?loc[r[k]]||r:r)}
+  D.tabs[t]=out});
+ try{D.cfg=JSON.parse(g.valueRanges[tabs.length].values?.[0]?.[0]||'null')}catch{D.cfg=null}
+ persist()}
+$('#bSync').onclick=()=>sync(true);
+$('#bSyncNow').onclick=()=>{dCfg.close();sync(true)};
+addEventListener('online',()=>sync());addEventListener('offline',paint);
+document.addEventListener('click',()=>{if(user&&tok&&navigator.onLine&&tok.exp-Date.now()<10*60e3&&Date.now()-lastRenew>5*60e3){lastRenew=Date.now();token(true).then(()=>sync()).catch(()=>{})}},true);
 
 /* ---- Ajustes ---- */
 const dCfg=$('#dCfg');
