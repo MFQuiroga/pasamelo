@@ -32,9 +32,39 @@ dialog .ib{color:var(--tinta)}
 dialog .btn{display:block;width:100%;margin:.45rem 0}
 #toast{position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);background:var(--tinta);color:var(--marfil);padding:.6rem 1rem;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 #toast.on{opacity:1}
+nav{display:flex;gap:.3rem;max-width:720px;margin:0 auto;padding:.7rem 1rem 0}
+nav button{background:none;border:1px solid var(--borde);border-radius:999px;padding:.35rem .9rem;font:inherit;color:var(--verde);cursor:pointer}
+nav button.on{background:var(--verde);color:var(--marfil);border-color:var(--verde)}
+input,textarea{font:inherit;color:var(--tinta);background:#fff;border:1px solid var(--borde);border-radius:7px;padding:.45rem .55rem;width:100%}
+input:focus,textarea:focus{outline:2px solid #2e6b5244;border-color:var(--verde2)}
+.bar{display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem}.bar input{flex:1}
+.row{padding:.55rem .3rem;border-bottom:1px solid var(--borde);cursor:pointer}.row:hover{background:#1f4d3a0a}
+dialog.big{width:780px}
+fieldset{border:1px solid var(--borde);border-radius:9px;margin:0 0 .8rem;padding:.5rem .8rem .8rem}
+legend{font:600 .95rem Georgia,serif;color:var(--verde);padding:0 .3rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.5rem .7rem}
+.fld{display:flex;flex-direction:column;gap:.15rem;font-size:.82rem;color:var(--gris)}.fld.w{grid-column:1/-1}
+.chk{display:flex;align-items:center;gap:.4rem;font-size:.9rem;align-self:end;padding:.4rem 0}.chk input{width:auto}
+.li{display:flex;align-items:center;gap:.2rem;padding:.25rem 0;border-bottom:1px dashed var(--borde)}.li>span{flex:1}.li.fin{opacity:.55}
+.add{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap}.add input{flex:1;min-width:150px}
+dialog .add .btn,dialog .foot .btn{display:inline-block;width:auto;margin:0}
+.foot{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.6rem}
+#fDel{margin-right:auto!important;color:#9b2c2c;border-color:#9b2c2c}
+.draft{background:#b8954a22;border:1px solid #b8954a;border-radius:7px;padding:.4rem .6rem}
+.lnk{background:none;border:0;color:var(--verde2);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.err{color:#9b2c2c;font-size:.9rem;min-height:1.2em}
+dialog h3{font:600 1rem Georgia,serif;color:var(--verde);margin:1rem 0 .2rem}
 </style></head><body>
 <header><h1>PASamelo</h1><small id="who"></small><button class="ib hide" id="bSync" style="font-size:.95rem" title="Cambios sin subir: tocá para subirlos"></button><button class="ib" id="bCfg" title="Ajustes">⚙️</button></header>
+<nav id="nav" class="hide"><button data-t="INICIO" title="Inicio">Inicio</button><button data-t="PERSONAS" title="Personas">Personas</button><button data-t="OBJETOS" title="Objetos asegurables">Objetos</button></nav>
 <main>
+ <section id="vLock" class="card hide"><h2>Desbloquear</h2><p class="muted" id="lockMsg"></p>
+  <form id="fLock" class="bar"><input type="password" id="lockPw" autocomplete="current-password" placeholder="Contraseña"><button class="btn" title="Entrar">Entrar</button></form>
+  <p class="err" id="lockErr"></p>
+  <button class="btn sec hide" id="bLockBio" title="Entrar con huella o cara">Usar huella</button>
+  <button class="lnk" id="bOlvido" title="Entrar de nuevo con Google y quitar la contraseña">Olvidé la contraseña</button></section>
+ <section id="vLista" class="card hide"><div class="bar"><input type="search" id="q" placeholder="Buscar (todas las palabras)…"><button class="btn" id="bNuevo"></button></div>
+  <div id="lista"></div><p class="muted" id="lInfo"></p></section>
  <section id="vLogin" class="card hide"><h2>Bienvenida/o</h2>
   <p>Tus datos quedan en tu propio Google Drive. PASamelo solo ve la hoja que crea o que elegís.</p>
   <button class="btn" id="bLogin" title="Ingresar con tu cuenta de Google">Ingresar con Google</button></section>
@@ -51,11 +81,30 @@ dialog .btn{display:block;width:100%;margin:.45rem 0}
  <button class="btn sec" id="bHoja2" title="Crear otra hoja o elegir una existente">Cambiar hoja</button>
  <button class="btn sec" id="bUpd" title="Borra la caché y recarga, sin tocar tus datos">Actualizar app</button>
  <button class="btn sec" id="bSalir" title="Cerrar sesión en este dispositivo">Cerrar sesión</button>
+ <div id="secSeg"><h3>Seguridad</h3>
+  <button class="btn sec" id="bPw" title="Contraseña para abrir la app en tus dispositivos">Poner contraseña</button>
+  <button class="btn sec hide" id="bPwQ" title="Quitar la contraseña en todos tus dispositivos">Quitar contraseña</button>
+  <button class="btn sec hide" id="bBio" title="Entrar con huella o cara en este dispositivo">Activar huella</button>
+  <button class="btn sec hide" id="bLock" title="Pedir la contraseña ahora">Bloquear ahora</button>
+  <label class="chk" title="Si lo destildás, al abrir la app tenés que entrar con Google"><input type="checkbox" id="cKeep"> Mantener sesión iniciada</label>
+  <label class="chk" title="Si lo tildás, la contraseña se pide cada vez que abrís la app"><input type="checkbox" id="cPedir"> Pedir contraseña al abrir</label></div>
  <p class="muted" id="ver"></p></dialog>
+<dialog id="dPw"><div class="top"><h2 id="pwT"></h2><button class="ib" id="pwX" title="Cerrar">✕</button></div>
+ <form id="fPw"><label class="fld" id="pwAct"><span>Contraseña actual</span><input type="password" id="pw0" autocomplete="current-password"></label>
+  <label class="fld pwN"><span>Nueva contraseña (mín. 6)</span><input type="password" id="pw1" autocomplete="new-password"></label>
+  <label class="fld pwN"><span>Repetila</span><input type="password" id="pw2" autocomplete="new-password"></label>
+  <p class="err" id="pwErr"></p><button class="btn" id="pwOk"></button></form></dialog>
+<dialog id="dAsk"><p id="askT"></p><div id="askB"></div></dialog>
+<dialog id="dPick"><p id="pkT"></p><input id="pkI"><div class="foot"><button class="btn sec" id="pkNo">Cancelar</button><button class="btn" id="pkOk">Aceptar</button></div></dialog>
+<dialog id="dF" class="big"><div class="top"><h2 id="fT"></h2><button class="ib" id="fX" title="Guardar y cerrar">✕</button></div>
+ <p class="draft hide" id="fDr">Borrador sin guardar · <button class="lnk" id="fDrX" title="Descartar el borrador">Descartar</button></p>
+ <div id="fB"></div>
+ <div class="foot"><button class="btn sec" id="fDel" title="Borrar este registro">Borrar</button><button class="btn sec" id="fDesc" title="Cerrar sin guardar los cambios">Descartar</button><button class="btn" id="fOk" title="Guardar y cerrar">Listo</button></div></dialog>
+<datalist id="dlPer"></datalist><datalist id="dlObj"></datalist><div id="dls"></div>
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const APP_VERSION='3', SCHEMA=1,
+const APP_VERSION='4', SCHEMA=1,
  CLIENT_ID='562982844201-hitbnj8r42hi7es2fvlthl07ukrbg5pc.apps.googleusercontent.com',
  API_KEY='AIzaSyDF84n7vqE1BTyi4cTsaK8gsfHDIqGAcwE', APP_ID='562982844201',
  DRIVE='https://www.googleapis.com/auth/drive.file', SCOPE='openid email profile '+DRIVE,
@@ -106,12 +155,15 @@ const errMsg=e=>e?.message==='scope'?'Falta el permiso de Drive: tocá de nuevo 
 const sheetKey=()=>'pas_sheet_'+(user?.email||'');
 
 function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),3500)}
-function show(v){for(const id of['vLogin','vHoja','vInicio'])$('#'+id).classList.toggle('hide',id!==v)}
+let LT='PERSONAS';
+function show(v){for(const id of['vLogin','vHoja','vInicio','vLock','vLista'])$('#'+id).classList.toggle('hide',id!==v);
+ $('#nav').classList.toggle('hide',v!=='vInicio'&&v!=='vLista');
+ for(const b of document.querySelectorAll('#nav button'))b.classList.toggle('on',b.dataset.t===(v==='vLista'?LT:'INICIO'))}
 function busy(b){for(const id of['bCrear','bElegir','bLogin'])$('#'+id).disabled=b}
 
 /* ---- Token (GIS token client) ---- */
 const gsi=()=>new Promise(r=>{(function w(){window.google?.accounts?.oauth2?r():setTimeout(w,100)})()});
-async function token(force){
+async function token(force,prompt){
  if(!force&&tok&&tok.exp-Date.now()>60000)return tok.access_token;
  await gsi();
  tc??=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPE,
@@ -119,7 +171,7 @@ async function token(force){
    if(!google.accounts.oauth2.hasGrantedAllScopes(r,DRIVE)){consent=true;return pend?.rej(new Error('scope'))}
    consent=false;tok={access_token:r.access_token,exp:Date.now()+r.expires_in*1000,scope:r.scope};LS.set('pas_tok',tok);pend?.res(tok.access_token)},
   error_callback:e=>pend?.rej(e)});
- return new Promise((res,rej)=>{pend={res,rej};tc.requestAccessToken({prompt:consent?'consent':'',login_hint:user?.email||''})});
+ return new Promise((res,rej)=>{pend={res,rej};tc.requestAccessToken({prompt:prompt||(consent?'consent':''),login_hint:user?.email||''})});
 }
 async function api(url,opt={}){
  const r=await fetch(url,{...opt,headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'}});
@@ -134,12 +186,17 @@ async function login(){busy(true);try{
  await token();const u=await api('https://www.googleapis.com/oauth2/v3/userinfo');
  user={email:u.email,name:u.given_name||u.name||''};LS.set('pas_user',user);start();
 }catch(e){toast(e?.message==='scope'?errMsg(e):'No se pudo ingresar')}busy(false)}
+const prefs=()=>({mantener_sesion:true,pedir_clave:false,...LS.get('pas_prefs')});
+const ss={get:k=>{try{return JSON.parse(sessionStorage.getItem(k))}catch{return null}},set:(k,v)=>{try{sessionStorage.setItem(k,JSON.stringify(v))}catch{}},del:k=>{try{sessionStorage.removeItem(k)}catch{}}};
 function start(){
+ if(user&&!ss.get('pas_on')&&!prefs().mantener_sesion){tok=null;user=null;LS.del('pas_tok');LS.del('pas_user')}
+ if(user)ss.set('pas_on',1);
  $('#who').textContent=user?.email||'';
  if(!user)return show('vLogin');
  const id=LS.get(sheetKey());id?abrir(id):show('vHoja');
+ if(ss.get('pas_msg')){toast(ss.get('pas_msg'));ss.del('pas_msg')}
 }
-function abrir(id){$('#lHoja').href='https://docs.google.com/spreadsheets/d/'+id;show('vInicio');boot(id)}
+function abrir(id){$('#lHoja').href='https://docs.google.com/spreadsheets/d/'+id;boot(id)}
 function conectar(id){LS.set(sheetKey(),id);abrir(id)}
 
 /* ---- Crear hoja nueva: todas las pestañas + encabezados + _cfg/_meta ocultas, en un solo pedido ---- */
@@ -197,13 +254,32 @@ const pk=t=>T[t].split(',')[0];
 const newId=t=>(PREF[t]||'id')+'_'+Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>(b%36).toString(36)).join('');
 let sid=null,D=null,saveT,syncT,syncing=false,lastRenew=0;
 const vacio=()=>({tabs:{},heads:{},cfg:null,sync:'',q:{},seq:0});
-const persist=()=>{clearTimeout(saveT);saveT=setTimeout(()=>sid&&idb.set('d:'+sid,D),300)};
-const pendientes=()=>D?Object.keys(D.q).length:0;
+/* ---- Paso 3b: cifrado de la copia local (PBKDF2 → AES-GCM) ---- */
+let KEY=null,KV=null,lockRes=null,lockV=null,IX={},ixv=0;
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),rnd=n=>crypto.getRandomValues(new Uint8Array(n));
+const kk=()=>'pas_key_'+sid,bk=()=>'pas_bio_'+sid,aes=r=>crypto.subtle.importKey('raw',r,'AES-GCM',false,['encrypt','decrypt']);
+async function derive(pw,v){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+ const b=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:unb64(v.salt),iterations:v.iter},k,512));return{hash:b64(b.slice(0,32)),raw:b.slice(32)}}
+async function useKey(raw,v){KEY=await aes(raw);KV=v;const s={k:b64(raw),h:v.hash};ss.set(kk(),s);prefs().pedir_clave?LS.del(kk()):LS.set(kk(),s)}
+function olvidarKey(){KEY=null;KV=null;LS.del(kk());ss.del(kk())}
+const savedKey=h=>{const s=ss.get(kk())||LS.get(kk());return s?.h===h?s.k:null};
+const enc=async o=>{const iv=rnd(12);return{iv,ct:await crypto.subtle.encrypt({name:'AES-GCM',iv},KEY,new TextEncoder().encode(JSON.stringify(o)))}};
+const dec=async r=>JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:r.iv},KEY,r.ct)));
+const persist=()=>{clearTimeout(saveT);saveT=setTimeout(async()=>{if(!sid||!D||(D.cfg?.verificador&&!KEY))return;
+ idb.set('d:'+sid,KEY?{enc:1,ver:KV,...await enc(D)}:D)},300)};
+function pedir(v,msg){lockV=v;$('#lockMsg').textContent=msg||'Ingresá tu contraseña de PASamelo.';$('#lockErr').textContent='';$('#lockPw').value='';
+ $('#bLockBio').classList.toggle('hide',LS.get(bk())?.h!==v.hash);show('vLock');setTimeout(()=>$('#lockPw').focus(),50);return new Promise(r=>lockRes=r)}
+async function desbloq(raw){await useKey(raw,lockV);show('vInicio');const r=lockRes;lockRes=null;r?.()}
+const pendientes=()=>D?Object.keys(D.q).length+(D.qc?1:0):0;
 const tokOk=()=>tok&&tok.exp-Date.now()>60000;
-async function boot(id){sid=id;D=(await idb.get('d:'+id))||vacio();paint();sync()}
-function mark(t,id,op){D.q[t+'|'+id]={op,n:++D.seq};persist();paint();clearTimeout(syncT);syncT=setTimeout(sync,1500)}
+async function boot(id){sid=id;KEY=null;KV=null;D=null;const r=await idb.get('d:'+id);
+ if(r?.enc){const k=savedKey(r.ver.hash);try{k?await useKey(unb64(k),r.ver):await pedir(r.ver);D=await dec(r)}catch{olvidarKey();await pedir(r.ver,'No se pudo abrir la copia: ingresá la contraseña.');D=await dec(r)}}
+ else D=r||vacio();
+ ixv++;show('vInicio');paint();sync()}
+function mark(t,id,op){D.q[t+'|'+id]={op,n:++D.seq};ixv++;persist();paint();clearTimeout(syncT);syncT=setTimeout(sync,1500)}
+function cfgDirty(){D.qc=++D.seq;persist();paint();clearTimeout(syncT);syncT=setTimeout(sync,1500)}
 /* API para los próximos pasos */
-const DB={list:t=>D?.tabs[t]||[],get:(t,id)=>DB.list(t).find(r=>r[pk(t)]==id),
+const DB={list:t=>D?.tabs[t]||[],get(t,id){let m=IX[t];if(!m||m.v!==ixv){m=new Map(DB.list(t).map(r=>[String(r[pk(t)]),r]));m.v=ixv;IX[t]=m}return m.get(String(id))},
  save(t,r){const k=pk(t),now=hoy(),a=D.tabs[t]??=[];r={...r};r[k]||=newId(t);r.fecha_modificacion=now;
   const i=a.findIndex(x=>x[k]==r[k]);if(i<0){r.fecha_creacion||=now;a.unshift(r)}else a[i]={...a[i],...r};mark(t,r[k],'up');return r},
  del(t,id){const k=pk(t);D.tabs[t]=DB.list(t).filter(x=>x[k]!=id);mark(t,id,'del')}};
@@ -217,11 +293,13 @@ async function sync(interactive){
  syncing=true;paint();
  try{await push();await pull();const d=new Date();D.sync=hoy()+' '+d.toTimeString().slice(0,5);persist()}
  catch(e){toast(errMsg(e))}
- syncing=false;paint()}
+ syncing=false;paint();renderLista()}
 const meta=async()=>{const m=await api(`${SH}/${sid}?fields=sheets.properties(sheetId,title,gridProperties.columnCount)`);const o={};for(const s of m.sheets)o[s.properties.title]=s.properties;return o};
 const rng=ts=>ts.map(t=>'ranges='+encodeURIComponent(t)).join('&');
 async function push(){
- const snap=Object.entries(D.q);if(!snap.length)return;
+ const snap=Object.entries(D.q),qc=D.qc;
+ if(qc){await putCfg(D.cfg);if(D.qc===qc)delete D.qc;persist()}
+ if(!snap.length)return;
  const por={};for(const[k,v]of snap){const[t,id]=k.split('|');(por[t]??={})[id]=v.op}
  const tabs=Object.keys(por),M=await meta();
  const hg=await api(`${SH}/${sid}/values:batchGet?`+rng(tabs.map(t=>`'${t}'!1:1`)));
@@ -245,28 +323,212 @@ async function push(){
  if(req.length)await api(`${SH}/${sid}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:req})});
  if(vals.length)await api(`${SH}/${sid}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:vals})});
  for(const[k,v]of snap)if(D.q[k]?.n===v.n)delete D.q[k];persist()}
+const putCfg=c=>api(`${SH}/${sid}/values/${encodeURIComponent("'_cfg'!A1")}?valueInputOption=RAW`,{method:'PUT',body:JSON.stringify({values:[[JSON.stringify(c)]]})});
 async function pull(){
  const tabs=Object.keys(T),g=await api(`${SH}/${sid}/values:batchGet?`+rng(tabs.map(t=>`'${t}'`).concat("'_cfg'!A1")));
+ if(!D.qc)try{D.cfg=JSON.parse(g.valueRanges[tabs.length].values?.[0]?.[0]||'null')}catch{D.cfg=null}
+ const ver=D.cfg?.verificador;
+ if(ver&&KV?.hash!==ver.hash)await pedir(ver,KV?'La contraseña cambió en otro dispositivo: ingresá la nueva.':'Esta hoja tiene contraseña.');
+ else if(!ver&&KEY){olvidarKey();LS.del(bk())}
  tabs.forEach((t,i)=>{const v=g.valueRanges[i].values||[],h=v[0]||[],k=pk(t);D.heads[t]=h;
   const loc=Object.fromEntries(DB.list(t).map(r=>[r[k],r]));
   const rows=v.slice(1).map(f=>Object.fromEntries(h.map((c,j)=>[c,f[j]??'']))).filter(r=>r[k]!=='');
   const out=[];for(const id in loc)if(D.q[t+'|'+id]?.op==='up'&&!rows.some(r=>r[k]==id))out.push(loc[id]);
   for(const r of rows){const q=D.q[t+'|'+r[k]];if(q?.op==='del')continue;out.push(q?.op==='up'?loc[r[k]]||r:r)}
   D.tabs[t]=out});
- try{D.cfg=JSON.parse(g.valueRanges[tabs.length].values?.[0]?.[0]||'null')}catch{D.cfg=null}
- persist()}
+ ixv++;persist()}
 $('#bSync').onclick=()=>sync(true);
 $('#bSyncNow').onclick=()=>{dCfg.close();sync(true)};
 addEventListener('online',()=>sync());addEventListener('offline',paint);
 document.addEventListener('click',()=>{if(user&&tok&&navigator.onLine&&tok.exp-Date.now()<10*60e3&&Date.now()-lastRenew>5*60e3){lastRenew=Date.now();token(true).then(()=>sync()).catch(()=>{})}},true);
 
+/* ---- Diálogos genéricos: ask (el último botón = No, con foco por defecto) y pick (elegir de una lista) ---- */
+function ask(msg,btns=['Sí','No']){return new Promise(res=>{const d=$('#dAsk'),b=$('#askB');$('#askT').textContent=msg;b.innerHTML='';
+ btns.forEach((t,i)=>{const e=document.createElement('button');e.className='btn'+(i===btns.length-1?' sec':'');e.textContent=t;e.onclick=()=>{d.close();res(i)};b.append(e)});
+ d.oncancel=e=>{e.preventDefault();d.close();res(btns.length-1)};d.showModal();b.lastChild.focus()})}
+function pick(msg,list){return new Promise(res=>{const d=$('#dPick'),i=$('#pkI');$('#pkT').textContent=msg;i.value='';i.setAttribute('list',list);
+ const fin=v=>{d.close();res(v)};$('#pkOk').onclick=()=>fin(i.value);$('#pkNo').onclick=()=>fin(null);d.oncancel=e=>{e.preventDefault();fin(null)};d.showModal();i.focus()})}
+
+/* ---- Paso 3b: contraseña, huella, bloqueo ---- */
+$('#fLock').onsubmit=async e=>{e.preventDefault();const d=await derive($('#lockPw').value,lockV);
+ if(d.hash!==lockV.hash)return $('#lockErr').textContent='Contraseña incorrecta';desbloq(d.raw)};
+const prfIn=s=>({prf:{eval:{first:s}}});
+$('#bLockBio').onclick=async()=>{try{const b=LS.get(bk()),a=await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:'public-key',id:unb64(b.cred)}],userVerification:'required',timeout:60000,extensions:prfIn(unb64(b.salt))}});
+ desbloq(new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(b.iv)},await aes(a.getClientExtensionResults().prf.results.first),unb64(b.w))))}
+ catch{$('#lockErr').textContent='No se pudo con la huella. Probá con la contraseña.'}};
+$('#bOlvido').onclick=async()=>{if(await ask('Vas a entrar de nuevo con Google y se quita la contraseña en todos tus dispositivos. Se borra la copia de este dispositivo: lo que no se subió se pierde. Después podés poner una nueva en ⚙️.',['Seguir','No']))return;
+ try{await token(true,'select_account');const g=await api(`${SH}/${sid}/values/${encodeURIComponent("'_cfg'!A1")}`);
+  const c=JSON.parse(g.values?.[0]?.[0]||'null')||cfgDef();c.verificador=null;await putCfg(c);
+  await idb.set('d:'+sid,null);olvidarKey();LS.del(bk());ss.set('pas_msg','Contraseña quitada. Podés poner una nueva en ⚙️');location.reload()}catch(e){$('#lockErr').textContent=errMsg(e)}};
+function cfgUI(){const v=D?.cfg?.verificador,on=!!(user&&D);$('#secSeg').classList.toggle('hide',!on);
+ $('#bPw').textContent=v?'Cambiar contraseña':'Poner contraseña';for(const i of['bPwQ','bLock'])$('#'+i).classList.toggle('hide',!v);
+ $('#bBio').classList.toggle('hide',!(v&&window.PublicKeyCredential));$('#bBio').textContent=LS.get(bk())?'Desactivar huella':'Activar huella';
+ const p=prefs();$('#cKeep').checked=p.mantener_sesion;$('#cPedir').checked=p.pedir_clave;$('#cPedir').disabled=!v}
+let pwMode;
+function abrirPw(m){if(!D?.sync)return toast('Primero sincronizá con la hoja');pwMode=m;const v=D.cfg?.verificador;
+ $('#pwT').textContent=m==='quitar'?'Quitar contraseña':v?'Cambiar contraseña':'Poner contraseña';$('#pwOk').textContent=m==='quitar'?'Quitar':'Guardar';
+ $('#pwAct').classList.toggle('hide',!v);for(const e of document.querySelectorAll('.pwN'))e.classList.toggle('hide',m==='quitar');
+ for(const i of['pw0','pw1','pw2'])$('#'+i).value='';$('#pwErr').textContent='';dCfg.close();$('#dPw').showModal()}
+$('#bPw').onclick=()=>abrirPw('poner');$('#bPwQ').onclick=()=>abrirPw('quitar');$('#pwX').onclick=()=>$('#dPw').close();
+$('#fPw').onsubmit=async e=>{e.preventDefault();const err=m=>$('#pwErr').textContent=m,v=D.cfg?.verificador;
+ if(v&&(await derive($('#pw0').value,v)).hash!==v.hash)return err('La contraseña actual no es correcta');
+ LS.del(bk());D.cfg??=cfgDef();
+ if(pwMode==='quitar'){D.cfg.verificador=null;olvidarKey()}
+ else{const a=$('#pw1').value;if(a.length<6)return err('Mínimo 6 caracteres');if(a!==$('#pw2').value)return err('Las dos no coinciden');
+  const n={salt:b64(rnd(16)),iter:310000},d=await derive(a,n);n.hash=d.hash;await useKey(d.raw,n);D.cfg.verificador=n}
+ cfgDirty();$('#dPw').close();toast(pwMode==='quitar'?'Contraseña quitada':'Contraseña guardada ✓')};
+$('#bLock').onclick=()=>{olvidarKey();location.reload()};
+$('#cKeep').onchange=e=>LS.set('pas_prefs',{...prefs(),mantener_sesion:e.target.checked});
+$('#cPedir').onchange=e=>{LS.set('pas_prefs',{...prefs(),pedir_clave:e.target.checked});const s=ss.get(kk());e.target.checked?LS.del(kk()):s&&LS.set(kk(),s)};
+$('#bBio').onclick=async()=>{if(LS.get(bk())){LS.del(bk());toast('Huella desactivada');return cfgUI()}
+ const s=savedKey(KV?.hash);if(!s)return toast('Entrá una vez con la contraseña');
+ try{const salt=rnd(32),c=await navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:'PASamelo'},user:{id:rnd(16),name:user.email,displayName:user.name||user.email},
+   pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000,extensions:{prf:{}}}});
+  if(!c.getClientExtensionResults().prf?.enabled)throw 0;
+  const a=await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:'public-key',id:c.rawId}],userVerification:'required',timeout:60000,extensions:prfIn(salt)}}),iv=rnd(12);
+  LS.set(bk(),{cred:b64(c.rawId),salt:b64(salt),iv:b64(iv),w:b64(await crypto.subtle.encrypt({name:'AES-GCM',iv},await aes(a.getClientExtensionResults().prf.results.first),unb64(s))),h:KV.hash});toast('Huella activada ✓')}
+ catch{toast('Este dispositivo no permite huella con cifrado')}cfgUI()};
+
+/* ==== Paso 4: Personas · Vínculos · Objetos ==== */
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const si=v=>/^(true|1|-1|si|sí|verdadero|x)$/i.test(String(v??'').trim());
+const toIn=v=>String(v||'').replace(/\//g,'-').slice(0,10),fromIn=v=>v.replace(/-/g,'/');
+const SUBS=['RODADOS','EDIFICIOS','BIENES','CAUCIONES'];
+const subCat=c=>/auto|moto|cami|rodad|vehic|pick|utilit|cuatri/i.test(c)?'RODADOS':/hogar|edif|comerc|casa|depto|integral|consorc|inmueb/i.test(c)?'EDIFICIOS':/cauc/i.test(c)?'CAUCIONES':/bien|equipo|celu|notebook|bici|electr/i.test(c)?'BIENES':'';
+const sub=o=>SUBS.find(t=>DB.get(t,o.id_objeto))||subCat(o.categoria);
+const perName=p=>p?[p.apellido,p.nombre].filter(Boolean).join(', ')||'(sin nombre)':'';
+const nomina=id=>DB.list('OBJETO_PERSONA').filter(r=>r.id_objeto==id).sort((a,b)=>(!!a.hasta-!!b.hasta)||String(b.desde).localeCompare(String(a.desde)));
+function objName(o){if(!o)return'';const t=sub(o),s=t&&DB.get(t,o.id_objeto);if(s?.denominacion||o.nombre_referencia||o.descripcion)return s?.denominacion||o.nombre_referencia||o.descripcion;
+ const n=nomina(o.id_objeto).filter(r=>!r.hasta),f=re=>n.filter(r=>re.test(r.rol)),p=[f(/titular|tomador/i),f(/asegurad/i),n].find(x=>x.length)||[];
+ return[...new Set(p.map(r=>DB.get('PERSONAS',r.id_persona)?.apellido).filter(Boolean))].join(' - ')||s?.patente||'(sin nombre)'}
+let PL={},PLR={},OL={};
+function perMap(){PL={};PLR={};const o=[];for(const p of DB.list('PERSONAS')){let l=perName(p)+(p.dni?' · '+p.dni:'');if(PL[l])l+=' · '+String(p.id_persona).slice(-4);PL[l]=p.id_persona;PLR[p.id_persona]=l;o.push(`<option value="${esc(l)}">`)}$('#dlPer').innerHTML=o.join('')}
+function objMap(){OL={};const o=[];for(const x of DB.list('OBJETOS')){let l=objName(x);if(OL[l])l+=' · '+String(x.id_objeto).slice(-4);OL[l]=x.id_objeto;o.push(`<option value="${esc(l)}">`)}$('#dlObj').innerHTML=o.join('')}
+
+/* Lista con buscador */
+function verLista(t){LT=t;$('#q').value='';$('#bNuevo').textContent=t==='PERSONAS'?'+ Persona':'+ Objeto';$('#bNuevo').title=t==='PERSONAS'?'Agregar una persona':'Agregar un objeto';show('vLista');renderLista()}
+function filaP(p){return{a:perName(p),b:[p.apodo,p.dni&&'DNI '+p.dni,p.telefono,p.localidad].filter(Boolean).join(' · '),h:norm(Object.values(p).join(' '))}}
+function filaO(o){const t=sub(o),s=t&&DB.get(t,o.id_objeto)||{},a=objName(o);
+ return{a,b:[o.categoria,s.patente,[s.marca,s.modelo,s.anio].filter(Boolean).join(' '),s.calle&&s.calle+' '+(s.numero||'')].filter(Boolean).join(' · '),h:norm([a,...Object.values(o),...Object.values(s)].join(' '))}}
+function renderLista(){if($('#vLista').classList.contains('hide'))return;const w=norm($('#q').value).split(/\s+/).filter(Boolean),k=pk(LT);
+ const rs=DB.list(LT).map(r=>[r,LT==='PERSONAS'?filaP(r):filaO(r)]).filter(([,x])=>w.every(p=>x.h.includes(p)));
+ $('#lista').innerHTML=rs.slice(0,150).map(([r,x])=>`<div class="row" data-id="${esc(r[k])}" title="Abrir"><b>${esc(x.a)}</b> <span class="muted">${esc(x.b)}</span></div>`).join('')||'<p class="muted">Nada para mostrar.</p>';
+ $('#lInfo').textContent=rs.length>150?`Mostrando 150 de ${rs.length}: afiná la búsqueda.`:rs.length+' en total'}
+let qT;$('#q').oninput=()=>{clearTimeout(qT);qT=setTimeout(renderLista,150)};
+$('#lista').onclick=e=>{const r=e.target.closest('.row');r&&abrirF(LT,r.dataset.id)};
+$('#bNuevo').onclick=()=>abrirF(LT,null);
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;b.dataset.t==='INICIO'?(show('vInicio'),paint()):verLista(b.dataset.t)};
+
+/* Ficha: campos estáticos por grupo */
+const FORM={
+ PERSONAS:[['Datos','apellido,nombre,apodo,dni,cuit,fecha_nacimiento,estado_civil,condicion_fiscal,estado_relacion,actividad,hijos,tutear,saludar_cumple'],['Domicilio','calle,numero,dto,barrio,localidad,cp,provincia'],['Contacto','telefono,email,id_enviar_a,licencia_tipo,licencia_vto'],['Historial','historial']],
+ OBJETOS:[['Objeto','categoria,descripcion,nombre_referencia,actividad,uso_moto,id_enviar_a,detalles']],
+ RODADOS:[['Rodado','denominacion,marca,modelo,anio,patente,uso,origen,combustible,color,km,motor,chasis,rastreo_satelital,id_titular_registral']],
+ EDIFICIOS:[['Edificio','denominacion,calle,numero,localidad,cp,provincia,id_titular_registral,m2_cubiertos,cantidad_pisos,tipo_construccion,rejas,cerradura_doble_paleta,linderos_riesgo,deteccion_humo_calor,red_hidrantes,rociadores,alarma_monitoreo,comunicacion_vivienda']],
+ BIENES:[['Bien','denominacion,marca,modelo,anio_fabricacion,serie,suma_asegurada']],
+ CAUCIONES:[['Caución','tipo_caucion,monto,moneda,documento_origen,nro_documento,fecha_documento,objeto_contrato,domicilio_riesgo,ref1,ref2,ref3,vigencia_requerida,tipo_alquiler,alquiler_monto,deposito_incluye,deposito_monto,contrato_anios,contrato_inicio,contrato_fin,inmueble_localidad,inmueble_cp,doc_respaldo']]};
+const sset=s=>new Set(s.split(','));
+const BOOL=sset('tutear,saludar_cumple,uso_moto,rastreo_satelital,rejas,cerradura_doble_paleta,linderos_riesgo,deteccion_humo_calor,red_hidrantes,rociadores,alarma_monitoreo,comunicacion_vivienda,deposito_incluye,doc_respaldo');
+const LST=sset('estado_relacion,estado_civil,condicion_fiscal,licencia_tipo,provincia,actividad,categoria,origen,uso,marca,combustible,color,tipo_construccion,tipo_caucion,moneda,documento_origen,tipo_alquiler,vigencia_requerida,vinculo,rol,barrio');
+const PER=sset('id_enviar_a,id_titular_registral'),LOC=sset('localidad,inmueble_localidad'),AREA=sset('historial,detalles,objeto_contrato');
+const isDate=f=>/^fecha_|_vto$|^contrato_(inicio|fin)$/.test(f);
+const LBL={dni:'DNI',cuit:'CUIT',cp:'CP',dto:'Dto.',anio:'Año',anio_fabricacion:'Año de fabricación',telefono:'Teléfono',id_enviar_a:'Enviar docum. a',id_titular_registral:'Titular registral',numero:'Número',m2_cubiertos:'m² cubiertos',km:'Km',uso_moto:'Es moto',descripcion:'Descripción',denominacion:'Denominación',condicion_fiscal:'Condición fiscal',licencia_tipo:'Licencia',licencia_vto:'Vto. licencia',fecha_nacimiento:'Nacimiento',estado_relacion:'Relación',saludar_cumple:'Saludar en el cumple',nombre_referencia:'Nombre de referencia',rastreo_satelital:'Rastreo satelital',cerradura_doble_paleta:'Cerradura doble paleta',deteccion_humo_calor:'Detección de humo/calor',comunicacion_vivienda:'Comunica con vivienda',linderos_riesgo:'Linderos de riesgo',red_hidrantes:'Red de hidrantes',alarma_monitoreo:'Alarma con monitoreo',tipo_construccion:'Tipo de construcción',cantidad_pisos:'Pisos',ref1:'Ref. 1',ref2:'Ref. 2',ref3:'Ref. 3',doc_respaldo:'Docum. respaldatoria',inmueble_cp:'CP del inmueble',inmueble_localidad:'Localidad del inmueble',tipo_caucion:'Tipo de caución',nro_documento:'Nº de documento',fecha_documento:'Fecha del documento',documento_origen:'Documento de origen',objeto_contrato:'Objeto del contrato',domicilio_riesgo:'Domicilio del riesgo',alquiler_monto:'Alquiler',deposito_incluye:'Incluye depósito',deposito_monto:'Depósito',contrato_anios:'Años de contrato',contrato_inicio:'Inicio del contrato',contrato_fin:'Fin del contrato',vigencia_requerida:'Vigencia requerida',tipo_alquiler:'Tipo de alquiler',suma_asegurada:'Suma asegurada',estado_civil:'Estado civil'};
+const lbl=f=>LBL[f]||(f[0].toUpperCase()+f.slice(1)).replace(/_/g,' ');
+function inp(k,f,v){const a=`data-k="${k}:${f}"`;
+ if(BOOL.has(f))return`<label class="chk"><input type="checkbox" ${a}${si(v)?' checked':''}> ${lbl(f)}</label>`;
+ const h=AREA.has(f)?`<textarea ${a} rows="3">${esc(v)}</textarea>`:isDate(f)?`<input type="date" ${a} value="${toIn(v)}">`
+  :PER.has(f)?`<input ${a} data-per list="dlPer" value="${esc(PLR[v]||'')}" placeholder="Buscar persona">`
+  :`<input ${a} value="${esc(v)}"${LST.has(f)||LOC.has(f)?` list="dl_${f}"`:''}>`;
+ return`<label class="fld${AREA.has(f)?' w':''}"><span>${lbl(f)}</span>${h}</label>`}
+/* Combos: valores de LISTAS (lista = nombre del campo) + los ya usados; localidades de LOCALIDADES */
+function dl(f){let e=document.getElementById('dl_'+f);if(!e){e=document.createElement('datalist');e.id='dl_'+f;$('#dls').append(e)}
+ const s=new Set(),src=LOC.has(f)?['localidad',f]:[f];
+ for(const r of DB.list('LISTAS'))if(r.lista==f&&!/^(false|0)$/i.test(r.activo))s.add(r.valor);
+ if(LOC.has(f))for(const r of DB.list('LOCALIDADES'))s.add(r.localidad);
+ for(const t in T)for(const c of src)if(T[t].split(',').includes(c))for(const r of DB.list(t))r[c]&&s.add(r[c]);
+ e.innerHTML=[...s].filter(Boolean).sort((a,b)=>String(a).localeCompare(b,'es')).map(v=>`<option value="${esc(v)}">`).join('')}
+
+let F=null;
+const drK=(t,id)=>'pas_dr_'+sid+'_'+t+'_'+(id||'nuevo');
+async function abrirF(t,id){perMap();let r=id?{...DB.get(t,id)}:{},st='',s={};const dr=LS.get(drK(t,id));
+ if(t==='OBJETOS'){if(id)st=sub(r);else if(!dr){const C=['Rodado','Edificio','Bien','Caución','Personas','Otro'],i=await ask('¿Qué querés agregar?',[...C,'Cancelar']);
+   if(i===C.length)return;r.categoria=C[i];st=SUBS[i]||''}
+  if(st)s={...(DB.get(st,id)||{})}}
+ const o=JSON.stringify([r,s]);if(dr)({r,s,st}=dr);
+ F={t,id,r,s,st,o};$('#fDr').classList.toggle('hide',!dr);renderF();$('#dF').showModal()}
+const grupo=(g,k,fs,o)=>`<fieldset><legend>${g}</legend><div class="grid">${fs.split(',').map(f=>inp(k,f,o[f])).join('')}</div></fieldset>`;
+function renderF(){const{t,r,s,st}=F;
+ $('#fT').textContent=t==='PERSONAS'?(F.id?perName(r):'Nueva persona'):(F.id?objName(r):'Nuevo objeto');
+ $('#fB').innerHTML=FORM[t].map(([g,fs])=>grupo(g,'m',fs,r)).join('')+(st?grupo(FORM[st][0][0],'s',FORM[st][0][1],s)+(st==='EDIFICIOS'?'<p class="muted" id="titInfo"></p>':''):'')
+  +(t==='PERSONAS'?secVinc()+secPerObj():secNomina());
+ for(const e of $('#fB').querySelectorAll('[list^="dl_"]'))dl(e.getAttribute('list').slice(3));
+ titInfo();$('#fDel').classList.toggle('hide',!F.id)}
+function leerF(){for(const e of $('#fB').querySelectorAll('[data-k]')){const[k,f]=e.dataset.k.split(':'),o=k==='m'?F.r:F.s;
+ o[f]=e.type==='checkbox'?(e.checked?'TRUE':o[f]?'FALSE':''):e.type==='date'?fromIn(e.value):'per'in e.dataset?(PL[e.value]||''):e.value.trim()}}
+function guardarF(){leerF();const{t,r,s,st}=F;if(JSON.stringify([r,s])===F.o){LS.del(drK(t,F.id));return true}
+ const falta=t==='PERSONAS'?!r.apellido&&!r.nombre&&'el apellido o el nombre':st==='RODADOS'&&!s.denominacion?'la denominación':!r.categoria&&'la categoría';
+ if(falta){LS.set(drK(t,F.id),{r,s,st});toast('Falta '+falta+': quedó como borrador');return false}
+ LS.del(drK(t,F.id));F.r={...DB.save(t,r)};F.id=F.r[pk(t)];if(st){s.id_objeto=F.id;F.s={...DB.save(st,s)}}
+ F.o=JSON.stringify([F.r,F.s]);$('#fDr').classList.add('hide');return true}
+function cerrarF(){guardarF();$('#dF').close();F=null;renderLista()}
+$('#fX').onclick=$('#fOk').onclick=cerrarF;$('#dF').oncancel=e=>{e.preventDefault();cerrarF()};
+$('#fDesc').onclick=async()=>{leerF();if(JSON.stringify([F.r,F.s])!==F.o&&await ask('¿Descartar los cambios?',['Descartar','No']))return;LS.del(drK(F.t,F.id));$('#dF').close();F=null};
+$('#fDrX').onclick=async()=>{if(await ask('¿Descartar el borrador?',['Descartar','No']))return;const{t,id}=F;LS.del(drK(t,id));$('#dF').close();F=null;id&&abrirF(t,id)};
+const fila=(txt,btns,cls='')=>`<div class="li${cls}"><span>${txt}</span>${btns}</div>`;
+const bt=(a,id,ic,ti,t='')=>`<button class="ib" data-a="${a}" data-id="${esc(id)}"${t?` data-t="${t}"`:''} title="${ti}">${ic}</button>`;
+const alta=(dl,ph,a,ti)=>`<div class="add"><input list="dlPer" id="aP" data-pick placeholder="Persona"><input list="${dl}" id="aV" placeholder="${ph}"><button class="btn sec" data-a="${a}" title="${ti}">Agregar</button></div>`;
+function secVinc(){const id=F.id,vs=id?DB.list('VINCULOS').filter(v=>v.id_persona==id||v.id_vinculado==id):[];
+ return`<fieldset><legend>Vínculos</legend>${vs.map(v=>{const o=v.id_persona==id?v.id_vinculado:v.id_persona;
+  return fila(`${esc(v.vinculo||'—')}${v.id_persona!=id?' <span class="muted" title="Cargado desde la otra persona">↩</span>':''} · ${esc(perName(DB.get('PERSONAS',o)))}`,bt('ver',o,'👁','Ver persona','PERSONAS')+bt('delv',v.id_vinculo,'×','Quitar vínculo'))}).join('')}
+  ${alta('dl_vinculo','Vínculo (ej.: referido)','addv','Agregar vínculo')}</fieldset>`}
+function secPerObj(){const ns=F.id?DB.list('OBJETO_PERSONA').filter(n=>n.id_persona==F.id):[];if(!ns.length)return'';
+ return`<fieldset><legend>Objetos</legend>${ns.map(n=>fila(`${esc(objName(DB.get('OBJETOS',n.id_objeto)))} <span class="muted">${esc(n.rol||'')}${n.hasta?' · hasta '+esc(n.hasta):''}</span>`,bt('ver',n.id_objeto,'👁','Ver objeto','OBJETOS'),n.hasta?' fin':'')).join('')}</fieldset>`}
+function secNomina(){const ns=F.id?nomina(F.id):[];
+ return`<fieldset><legend>Personas (nómina)</legend>${ns.map(n=>fila(`${esc(perName(DB.get('PERSONAS',n.id_persona)))} <span class="muted">${esc(n.rol||'')} · desde ${esc(n.desde||'?')}${n.hasta?' hasta '+esc(n.hasta):''}</span>`,
+  bt('ver',n.id_persona,'👁','Ver persona','PERSONAS')+(n.hasta?'':bt('finn',n.id,'⏏','Marcar que salió hoy'))+bt('deln',n.id,'×','Quitar de la nómina'),n.hasta?' fin':'')).join('')}
+  ${alta('dl_rol','Rol (ej.: titular)','addn','Agregar a la nómina')}</fieldset>`}
+function titInfo(){const e=$('#titInfo');if(!e)return;const p=DB.get('PERSONAS',PL[$('#fB [data-k="s:id_titular_registral"]')?.value]);
+ e.textContent=p?`Titular: DNI ${p.dni||'—'} · Nac. ${p.fecha_nacimiento||'—'} · Cond. fiscal: ${p.condicion_fiscal||'—'}`:''}
+$('#fB').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;e.preventDefault();const a=b.dataset.a,id=b.dataset.id;
+ if(a==='ver'){if(!guardarF())return;$('#dF').close();return abrirF(b.dataset.t,id)}
+ if(a==='addv'||a==='addn'){const p=PL[$('#aP').value],v=$('#aV').value.trim();if(!p)return toast('Elegí una persona de la lista');if(!guardarF())return;
+  if(a==='addv'){if(p==F.id)return toast('No se puede vincular consigo misma');DB.save('VINCULOS',{id_persona:F.id,id_vinculado:p,vinculo:v})}
+  else DB.save('OBJETO_PERSONA',{id_objeto:F.id,id_persona:p,rol:v,desde:hoy(),hasta:''});return renderF()}
+ if(a==='delv'||a==='deln'){if(await ask(a==='delv'?'¿Quitar este vínculo?':'¿Quitar a esta persona de la nómina?',['Quitar','No']))return;leerF();DB.del(a==='delv'?'VINCULOS':'OBJETO_PERSONA',id);return renderF()}
+ if(a==='finn'){if(await ask('¿Marcar que salió hoy?',['Sí','No']))return;leerF();DB.save('OBJETO_PERSONA',{...DB.get('OBJETO_PERSONA',id),hasta:hoy()});renderF()}};
+$('#fB').addEventListener('change',async e=>{const el=e.target,f=el.dataset.k?.split(':')[1];
+ if(el.matches('[data-per],[data-pick]')&&el.value&&!PL[el.value]){const v=el.value.trim();
+  if(await ask(`«${v}» no está. ¿Creo la persona?`,['Crear','No']))el.value='';else{const n=DB.save('PERSONAS',{apellido:v});perMap();el.value=PLR[n.id_persona]}}
+ if(LOC.has(f)){const L=DB.list('LOCALIDADES').find(x=>norm(x.localidad)===norm(el.value)),k=el.dataset.k[0];
+  if(L)for(const[ff,v]of[[f==='localidad'?'cp':'inmueble_cp',L.cp],['provincia',L.provincia]]){const i=$(`#fB [data-k="${k}:${ff}"]`);if(i&&!i.value)i.value=v}}
+ if(f==='id_titular_registral')titInfo()});
+
+/* Borrar: confirmación con «No» por defecto; si se usa en otras tablas, ofrecer reemplazo */
+const REFS={PERSONAS:'VINCULOS.id_persona*,VINCULOS.id_vinculado*,OBJETO_PERSONA.id_persona*,POLIZAS.id_tomador,POLIZAS.id_enviar_a,PERSONAS.id_enviar_a,OBJETOS.id_enviar_a,RODADOS.id_titular_registral,EDIFICIOS.id_titular_registral,SINIESTRO_PARTICIPANTES.id_persona,RECLAMOS.id_persona_contraria,RECLAMOS.id_persona_cliente,RECLAMOS.id_conductor,SEGUIMIENTO.id_persona,COTIZACIONES.id_persona',
+ OBJETOS:'OBJETO_PERSONA.id_objeto*,POLIZAS.id_objeto,SINIESTROS.id_objeto,SINIESTRO_PARTICIPANTES.id_objeto,RECLAMOS.id_objeto_cliente,RECLAMOS.id_objeto_contrario,SEGUIMIENTO.id_objeto,COTIZACIONES.id_objeto'};
+const usos=(t,id)=>REFS[t].split(',').flatMap(x=>{const[tt,f]=x.replace('*','').split('.');return DB.list(tt).filter(r=>r[f]==id&&!(tt===t&&r[pk(t)]==id)).map(r=>({t:tt,f,link:x.endsWith('*'),r}))});
+$('#fDel').onclick=async()=>{const{t,id}=F,P=t==='PERSONAS',nom=P?perName(DB.get(t,id)):objName(DB.get(t,id)),u=usos(t,id);
+ if(!u.length){if(await ask(`¿Borrar «${nom}»? No se puede deshacer.`,['Borrar','No']))return}
+ else{const op=['Reemplazar por otro…',...(u.some(x=>!x.link)?[]:['Borrar igual (quita esos vínculos)']),'No'],
+   i=await ask(`«${nom}» se usa en ${u.length} lugar(es): ${[...new Set(u.map(x=>x.t.toLowerCase().replace(/_/g,' ')))].join(', ')}. ¿Qué hago?`,op);
+  if(i===op.length-1)return;
+  if(i===0){P?perMap():objMap();const v=await pick(P?'¿Por qué persona la reemplazo?':'¿Por qué objeto lo reemplazo?',P?'dlPer':'dlObj'),n=(P?PL:OL)[v];
+   if(!n||n==id)return v!=null&&toast('Elegí uno de la lista');for(const x of u)DB.save(x.t,{...x.r,[x.f]:n})}
+  else for(const x of u)DB.del(x.t,x.r[pk(x.t)])}
+ if(!P)for(const s of SUBS)DB.get(s,id)&&DB.del(s,id);
+ DB.del(t,id);LS.del(drK(t,id));$('#dF').close();F=null;renderLista();toast('Borrado')};
+
 /* ---- Ajustes ---- */
 const dCfg=$('#dCfg');
-$('#bCfg').onclick=()=>{$('#bHoja2').classList.toggle('hide',!user);$('#bSalir').classList.toggle('hide',!user);dCfg.showModal()};
+$('#bCfg').onclick=()=>{$('#bHoja2').classList.toggle('hide',!user);$('#bSalir').classList.toggle('hide',!user);cfgUI();dCfg.showModal()};
 $('#bCfgX').onclick=()=>dCfg.close();
 $('#bHoja2').onclick=()=>{dCfg.close();show('vHoja')};
 $('#bUpd').onclick=async()=>{try{for(const r of await navigator.serviceWorker?.getRegistrations()||[])await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch{}location.reload()};
-$('#bSalir').onclick=()=>{try{tok&&google.accounts.oauth2.revoke(tok.access_token)}catch{}tok=null;user=null;LS.del('pas_tok');LS.del('pas_user');dCfg.close();start()};
+$('#bSalir').onclick=async()=>{dCfg.close();const n=pendientes(),i=await ask((n?`Hay ${n} cambios sin subir. `:'')+'¿Borro también la copia de este dispositivo?',['Cerrar y borrar la copia','Cerrar y dejar la copia','Cancelar']);
+ if(i===2)return;clearTimeout(saveT);clearTimeout(syncT);
+ if(i===0&&sid){await idb.set('d:'+sid,null);olvidarKey();LS.del(bk());LS.del(sheetKey())}
+ try{tok&&google.accounts.oauth2.revoke(tok.access_token)}catch{}tok=null;user=null;sid=null;D=null;KEY=null;LS.del('pas_tok');LS.del('pas_user');ss.del('pas_on');start()};
 $('#ver').textContent='Versión '+APP_VERSION;
 $('#bLogin').onclick=login;$('#bCrear').onclick=crear;$('#bElegir').onclick=elegir;
 
