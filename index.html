@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es-AR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PASamelo</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#1f4d3a">
+<link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--marfil:#faf7ef;--papel:#fffdf8;--verde:#1f4d3a;--verde2:#2e6b52;--tinta:#22302a;--gris:#6b726d;--borde:#e3ddcc}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--marfil);color:var(--tinta)}
+header{display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;background:var(--verde);color:var(--marfil)}
+header h1{font:600 1.15rem Georgia,serif;margin:0;flex:1;letter-spacing:.02em}
+header small{opacity:.75}
+.ib{background:none;border:0;color:inherit;font-size:1.2rem;cursor:pointer;padding:.25rem .45rem;border-radius:6px}
+.ib:hover{background:#ffffff22}
+main{max-width:720px;margin:0 auto;padding:1.5rem 1rem}
+.card{background:var(--papel);border:1px solid var(--borde);border-radius:10px;padding:1.4rem;margin-bottom:1rem}
+h2{font:600 1.2rem Georgia,serif;color:var(--verde);margin:0 0 .6rem}
+a{color:var(--verde2)}
+.btn{display:inline-block;background:var(--verde);color:var(--marfil);border:1px solid var(--verde);border-radius:8px;padding:.6rem 1.1rem;font:inherit;font-weight:600;cursor:pointer;margin:.3rem .4rem .3rem 0}
+.btn:hover{background:var(--verde2)}
+.btn.sec{background:transparent;color:var(--verde)}
+.btn.sec:hover{background:#1f4d3a0f}
+.btn:disabled{opacity:.5;cursor:wait}
+.muted{color:var(--gris);font-size:.9rem}
+.hide{display:none!important}
+dialog{border:1px solid var(--borde);border-radius:12px;background:var(--papel);color:var(--tinta);padding:1.2rem;width:320px;max-width:92vw}
+dialog::backdrop{background:#0005}
+dialog .top{display:flex;align-items:center;margin-bottom:.6rem}
+dialog .top h2{flex:1;margin:0}
+dialog .ib{color:var(--tinta)}
+dialog .btn{display:block;width:100%;margin:.45rem 0}
+#toast{position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);background:var(--tinta);color:var(--marfil);padding:.6rem 1rem;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+#toast.on{opacity:1}
+</style></head><body>
+<header><h1>PASamelo</h1><small id="who"></small><button class="ib" id="bCfg" title="Ajustes">⚙️</button></header>
+<main>
+ <section id="vLogin" class="card hide"><h2>Bienvenida/o</h2>
+  <p>Tus datos quedan en tu propio Google Drive. PASamelo solo ve la hoja que crea o que elegís.</p>
+  <button class="btn" id="bLogin" title="Ingresar con tu cuenta de Google">Ingresar con Google</button></section>
+ <section id="vHoja" class="card hide"><h2>Tu hoja de datos</h2>
+  <p class="muted">Primera vez: creá una hoja nueva. Si ya tenés una, elegila de tu Drive.</p>
+  <button class="btn" id="bCrear" title="Crear una hoja nueva en tu Drive">Crear hoja nueva</button>
+  <button class="btn sec" id="bElegir" title="Elegir una hoja que ya tenés">Elegir hoja existente</button></section>
+ <section id="vInicio" class="card hide"><h2>Inicio</h2>
+  <p>Hoja conectada: <a id="lHoja" target="_blank" rel="noopener" title="Abrir la hoja en Google Sheets">abrir</a></p>
+  <p class="muted">Próximamente: personas, pólizas, siniestros…</p></section>
+</main>
+<dialog id="dCfg"><div class="top"><h2>Ajustes</h2><button class="ib" id="bCfgX" title="Cerrar">✕</button></div>
+ <button class="btn sec" id="bHoja2" title="Crear otra hoja o elegir una existente">Cambiar hoja</button>
+ <button class="btn sec" id="bUpd" title="Borra la caché y recarga, sin tocar tus datos">Actualizar app</button>
+ <button class="btn sec" id="bSalir" title="Cerrar sesión en este dispositivo">Cerrar sesión</button>
+ <p class="muted" id="ver"></p></dialog>
+<div id="toast"></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+const APP_VERSION='1', SCHEMA=1,
+ CLIENT_ID='562982844201-hitbnj8r42hi7es2fvlthl07ukrbg5pc.apps.googleusercontent.com',
+ API_KEY='AIzaSyDF84n7vqE1BTyi4cTsaK8gsfHDIqGAcwE', APP_ID='562982844201',
+ SCOPE='openid email profile https://www.googleapis.com/auth/drive.file',
+ SH='https://sheets.googleapis.com/v4/spreadsheets';
+
+/* Pestañas y campos (PASAMELO_heredado §1). Orden = orden de columnas. */
+const T={
+PERSONAS:'id_persona,fecha_creacion,estado_relacion,apellido,nombre,apodo,tutear,dni,cuit,fecha_nacimiento,calle,numero,dto,barrio,cp,localidad,provincia,actividad,email,telefono,id_enviar_a,estado_civil,licencia_tipo,licencia_vto,saludar_cumple,ultimo_saludo_anio,historial,fecha_modificacion,tomador,hijos,condicion_fiscal,ultimo_saludo_fecha',
+VINCULOS:'id_vinculo,id_persona,id_vinculado,vinculo',
+OBJETOS:'id_objeto,fecha_creacion,categoria,descripcion,actividad,uso_moto,detalles,nombre_referencia,fecha_modificacion,id_enviar_a',
+OBJETO_PERSONA:'id,id_objeto,id_persona,rol,desde,hasta',
+RODADOS:'id_objeto,denominacion,origen,uso,marca,modelo,patente,anio,motor,chasis,color,km,combustible,rastreo_satelital,id_titular_registral,id_flota,flota_desde,flota_hasta',
+EDIFICIOS:'id_objeto,denominacion,calle,numero,localidad,provincia,cp,id_titular_registral,m2_cubiertos,cantidad_pisos,tipo_construccion,rejas,cerradura_doble_paleta,linderos_riesgo,deteccion_humo_calor,red_hidrantes,rociadores,alarma_monitoreo,comunicacion_vivienda,condicion_fiscal_titular',
+BIENES:'id_objeto,denominacion,marca,modelo,anio_fabricacion,serie,suma_asegurada',
+CAUCIONES:'id_objeto,tipo_caucion,monto,moneda,documento_origen,nro_documento,fecha_documento,objeto_contrato,domicilio_riesgo,ref1,ref2,ref3,vigencia_requerida,tipo_alquiler,alquiler_monto,deposito_incluye,deposito_monto,contrato_anios,contrato_inicio,contrato_fin,inmueble_localidad,inmueble_cp,doc_respaldo',
+POLIZAS:'id_poliza,id_compania,nro_poliza,seguro_tipo,id_tomador,id_objeto,id_cobertura,inicio,fin,refacturacion,forma_pago,enviar_refacturaciones,informar_refacturaciones,tipo_emision,id_poliza_anterior,causa_fin,estado_manual,vendedor,fecha_envio,comentarios,fecha_modificacion,bonif_desc,id_enviar_a',
+ENDOSOS:'id_endoso,id_poliza,nro_endoso,cubre_desde,cubre_hasta,sa,gnc_sa,cuota_monto,vto_cuota,detalle,fecha_envio',
+SINIESTROS:'id_siniestro,id_poliza,id_objeto,fecha_denuncia,fecha_siniestro,hora,calle,numero,entrecalle1,entrecalle2,localidad,cp,sentido,relato_cliente,danos_asegurado,quien_choco,circula,denuncia_nro,siniestro_nro,tramitador,fecha_pago_estimada,pagado,estado,tercero_compania,tercero_poliza,tercero_danos,recordatorio,fecha_modificacion,provincia',
+SINIESTRO_PARTICIPANTES:'id,id_siniestro,id_persona,rol,id_objeto,compania_tercero,poliza_tercero,danos,lesiones',
+RECLAMOS:'id_reclamo,id_siniestro,tipo,id_persona_contraria,compania_contraria,fecha_ingreso,gestor,monto_reclamar,monto_indemnizado,porcentaje_acordado,monto_esperado,fecha_pago,pagado,cerrado,poliza_contraria,pas_cobro,id_persona_cliente,id_objeto_cliente,id_objeto_contrario,fecha_hecho,hora_hecho,relato,danos_reclamante,calle,numero,localidad,cp,id_conductor,reclamo_nro,rechazado,no_acepto',
+SEGUIMIENTO:'id_seguimiento,fecha,id_persona,id_poliza,id_siniestro,texto,fecha_aviso,hecho,fecha_modificacion,id_reclamo,id_objeto',
+COTIZACIONES:'id_cotizacion,fecha,valida_hasta,id_persona,id_objeto,localidad,cp,forma_pago,obj_detalle,notas,fecha_modificacion',
+COT_ALTERNATIVAS:'id,id_cotizacion,id_compania,id_cobertura,sa,cuota,refacturacion,mostrar,otros,recomendada',
+COT_CONCEPTOS:'id_concepto,id_cotizacion,concepto,orden',
+COT_CONC_VALOR:'id,id_concepto,id_alternativa,valor',
+COMPANIAS:'id_compania,nombre,logo,favorita,codigo_nro,subcodigo_de,codigo_abierto,cuit,direccion,weblink,app_clientes,grua,emergencias,usuario,comentarios,adherida_cleas',
+COBERTURAS:'id_cobertura,id_compania,categoria,tipo,nombre,franquicia,limitrofes,resumen_msj,detalles,limites_condiciones',
+COBERTURA_ITEMS:'id,id_cobertura,concepto,incluido,detalle,orden',
+COB_CATALOGO:'id,categoria,clase,nombre,orden,visible',
+LISTAS:'id,lista,valor,orden,activo',
+LOCALIDADES:'id_localidad,cp,localidad,provincia',
+VENDEDORES:'id_vendedor,nombre,telefono,email,activo,notas,comision_pct',
+GESTORES:'id_gestor,nombre,tipo,telefono,email,activo,notas',
+COMISIONES:'id_poliza,vendedor,pct,monto,fecha_estimada,estado,fecha_pago,nota,fecha_mod'};
+/* Toda tabla lleva fecha_creacion y fecha_modificacion (al final si no estaban). */
+const cols=t=>{const a=T[t].split(',');for(const f of['fecha_creacion','fecha_modificacion'])a.includes(f)||a.push(f);return a};
+const hoy=()=>new Date().toLocaleDateString('sv').replace(/-/g,'/');
+const colL=n=>{let s='';n++;while(n){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=(n-1-r)/26}return s};
+const cfgDef=()=>({schema:SCHEMA,whatsapp:{},prefs:{mantener_sesion:true,pedir_clave:false},verificador:null});
+const metaDef=()=>({schema:SCHEMA,creada:hoy(),ultima_sync:''});
+
+const $=s=>document.querySelector(s);
+const LS={get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
+ set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del:k=>localStorage.removeItem(k)};
+let tok=LS.get('pas_tok'),user=LS.get('pas_user'),tc,pend;
+const sheetKey=()=>'pas_sheet_'+(user?.email||'');
+
+function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),3500)}
+function show(v){for(const id of['vLogin','vHoja','vInicio'])$('#'+id).classList.toggle('hide',id!==v)}
+function busy(b){for(const id of['bCrear','bElegir','bLogin'])$('#'+id).disabled=b}
+
+/* ---- Token (GIS token client) ---- */
+const gsi=()=>new Promise(r=>{(function w(){window.google?.accounts?.oauth2?r():setTimeout(w,100)})()});
+async function token(){
+ if(tok&&tok.exp-Date.now()>60000)return tok.access_token;
+ await gsi();
+ tc??=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPE,
+  callback:r=>{if(r.error)return pend?.rej(r);tok={access_token:r.access_token,exp:Date.now()+r.expires_in*1000};LS.set('pas_tok',tok);pend?.res(tok.access_token)},
+  error_callback:e=>pend?.rej(e)});
+ return new Promise((res,rej)=>{pend={res,rej};tc.requestAccessToken({prompt:'',login_hint:user?.email||''})});
+}
+async function api(url,opt={}){
+ const r=await fetch(url,{...opt,headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'}});
+ if(r.status===401){tok=null;LS.del('pas_tok')}
+ if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error?.message||('HTTP '+r.status));
+ return r.json();
+}
+
+/* ---- Login ---- */
+async function login(){busy(true);try{
+ await token();const u=await api('https://www.googleapis.com/oauth2/v3/userinfo');
+ user={email:u.email,name:u.given_name||u.name||''};LS.set('pas_user',user);start();
+}catch(e){toast('No se pudo ingresar')}busy(false)}
+function start(){
+ $('#who').textContent=user?.email||'';
+ if(!user)return show('vLogin');
+ const id=LS.get(sheetKey());id?abrir(id):show('vHoja');
+}
+function abrir(id){$('#lHoja').href='https://docs.google.com/spreadsheets/d/'+id;show('vInicio')}
+function conectar(id){LS.set(sheetKey(),id);abrir(id)}
+
+/* ---- Crear hoja nueva: todas las pestañas + encabezados + _cfg/_meta ocultas, en un solo pedido ---- */
+const txt=v=>({userEnteredValue:{stringValue:v}});
+async function crear(){busy(true);try{
+ const sheets=Object.keys(T).map((t,i)=>{const c=cols(t);return{
+  properties:{title:t,index:i,gridProperties:{frozenRowCount:1,columnCount:Math.max(26,c.length)}},
+  data:[{rowData:[{values:c.map(v=>({...txt(v),userEnteredFormat:{textFormat:{bold:true}}}))}]}]}});
+ for(const[t,v]of[['_cfg',cfgDef()],['_meta',metaDef()]])
+  sheets.push({properties:{title:t,hidden:true},data:[{rowData:[{values:[txt(JSON.stringify(v))]}]}]});
+ const r=await api(SH,{method:'POST',body:JSON.stringify({properties:{title:'PASamelo · Datos',locale:'es_AR',timeZone:'America/Argentina/Buenos_Aires'},sheets})});
+ conectar(r.spreadsheetId);toast('Hoja creada ✓');
+}catch(e){toast('Error: '+e.message)}busy(false)}
+
+/* ---- Elegir hoja existente con Picker ---- */
+const loadPicker=()=>new Promise((res,rej)=>{if(window.google?.picker)return res();
+ const s=document.createElement('script');s.src='https://apis.google.com/js/api.js';
+ s.onload=()=>gapi.load('picker',{callback:res,onerror:rej});s.onerror=rej;document.head.appendChild(s)});
+async function elegir(){try{
+ const t=await token();await loadPicker();
+ new google.picker.PickerBuilder()
+  .addView(new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST))
+  .setOAuthToken(t).setDeveloperKey(API_KEY).setAppId(APP_ID).setLocale('es-419').setTitle('Elegí tu hoja de PASamelo')
+  .setCallback(async d=>{if(d.action!==google.picker.Action.PICKED)return;const id=d.docs[0].id;busy(true);
+   try{if(await asegurar(id)!==false){conectar(id);toast('Hoja conectada ✓')}}catch(e){toast('Error: '+e.message)}busy(false)})
+  .build().setVisible(true);
+}catch(e){toast('No se pudo abrir el selector')}}
+
+/* ---- Completar lo que falte en una hoja existente: pestañas y columnas nuevas (al final, sin mover nada) ---- */
+async function asegurar(id){
+ const m=await api(`${SH}/${id}?fields=sheets.properties(sheetId,title,gridProperties.columnCount)`);
+ const ex={};for(const s of m.sheets)ex[s.properties.title]=s.properties;
+ if(!ex._cfg&&!ex.PERSONAS&&!confirm('Esta hoja no parece de PASamelo. ¿Le agrego las pestañas que faltan?'))return false;
+ const tabs=Object.keys(T),hay=tabs.filter(t=>ex[t]),heads={},req=[],vals=[];
+ if(hay.length){const g=await api(`${SH}/${id}/values:batchGet?`+hay.map(t=>'ranges='+encodeURIComponent(`'${t}'!1:1`)).join('&'));
+  g.valueRanges.forEach((v,i)=>heads[hay[i]]=(v.values||[[]])[0]||[])}
+ for(const t of tabs){const c=cols(t);
+  if(!ex[t]){req.push({addSheet:{properties:{title:t,gridProperties:{frozenRowCount:1,columnCount:Math.max(26,c.length)}}}});vals.push({range:`'${t}'!A1`,values:[c]});continue}
+  const h=heads[t],falta=c.filter(f=>!h.includes(f));if(!falta.length)continue;
+  const n=h.length+falta.length,cc=ex[t].gridProperties.columnCount;
+  if(n>cc)req.push({appendDimension:{sheetId:ex[t].sheetId,dimension:'COLUMNS',length:n-cc}});
+  vals.push({range:`'${t}'!${colL(h.length)}1`,values:[falta]});
+ }
+ for(const[t,f]of[['_cfg',cfgDef],['_meta',metaDef]])if(!ex[t]){req.push({addSheet:{properties:{title:t,hidden:true}}});vals.push({range:`'${t}'!A1`,values:[[JSON.stringify(f())]]})}
+ if(req.length)await api(`${SH}/${id}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:req})});
+ if(vals.length)await api(`${SH}/${id}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:vals})});
+}
+
+/* ---- Ajustes ---- */
+const dCfg=$('#dCfg');
+$('#bCfg').onclick=()=>{$('#bHoja2').classList.toggle('hide',!user);$('#bSalir').classList.toggle('hide',!user);dCfg.showModal()};
+$('#bCfgX').onclick=()=>dCfg.close();
+$('#bHoja2').onclick=()=>{dCfg.close();show('vHoja')};
+$('#bUpd').onclick=async()=>{try{for(const r of await navigator.serviceWorker?.getRegistrations()||[])await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch{}location.reload()};
+$('#bSalir').onclick=()=>{try{tok&&google.accounts.oauth2.revoke(tok.access_token)}catch{}tok=null;user=null;LS.del('pas_tok');LS.del('pas_user');dCfg.close();start()};
+$('#ver').textContent='Versión '+APP_VERSION;
+$('#bLogin').onclick=login;$('#bCrear').onclick=crear;$('#bElegir').onclick=elegir;
+
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+start();
+</script>
+</body></html>
