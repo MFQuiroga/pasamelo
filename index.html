@@ -54,10 +54,10 @@ dialog .btn{display:block;width:100%;margin:.45rem 0}
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const APP_VERSION='1', SCHEMA=1,
+const APP_VERSION='2', SCHEMA=1,
  CLIENT_ID='562982844201-hitbnj8r42hi7es2fvlthl07ukrbg5pc.apps.googleusercontent.com',
  API_KEY='AIzaSyDF84n7vqE1BTyi4cTsaK8gsfHDIqGAcwE', APP_ID='562982844201',
- SCOPE='openid email profile https://www.googleapis.com/auth/drive.file',
+ DRIVE='https://www.googleapis.com/auth/drive.file', SCOPE='openid email profile '+DRIVE,
  SH='https://sheets.googleapis.com/v4/spreadsheets';
 
 /* Pestañas y campos (PASAMELO_heredado §1). Orden = orden de columnas. */
@@ -99,7 +99,9 @@ const metaDef=()=>({schema:SCHEMA,creada:hoy(),ultima_sync:''});
 const $=s=>document.querySelector(s);
 const LS={get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}},del:k=>localStorage.removeItem(k)};
-let tok=LS.get('pas_tok'),user=LS.get('pas_user'),tc,pend;
+let tok=LS.get('pas_tok'),user=LS.get('pas_user'),tc,pend,consent=false;
+if(tok&&!(tok.scope||'').includes(DRIVE))tok=null;
+const errMsg=e=>e?.message==='scope'?'Falta el permiso de Drive: tocá de nuevo y tildá la casilla':'Error: '+(e?.message||e?.type||'desconocido');
 const sheetKey=()=>'pas_sheet_'+(user?.email||'');
 
 function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),3500)}
@@ -112,22 +114,25 @@ async function token(){
  if(tok&&tok.exp-Date.now()>60000)return tok.access_token;
  await gsi();
  tc??=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPE,
-  callback:r=>{if(r.error)return pend?.rej(r);tok={access_token:r.access_token,exp:Date.now()+r.expires_in*1000};LS.set('pas_tok',tok);pend?.res(tok.access_token)},
+  callback:r=>{if(r.error)return pend?.rej(r);
+   if(!google.accounts.oauth2.hasGrantedAllScopes(r,DRIVE)){consent=true;return pend?.rej(new Error('scope'))}
+   consent=false;tok={access_token:r.access_token,exp:Date.now()+r.expires_in*1000,scope:r.scope};LS.set('pas_tok',tok);pend?.res(tok.access_token)},
   error_callback:e=>pend?.rej(e)});
- return new Promise((res,rej)=>{pend={res,rej};tc.requestAccessToken({prompt:'',login_hint:user?.email||''})});
+ return new Promise((res,rej)=>{pend={res,rej};tc.requestAccessToken({prompt:consent?'consent':'',login_hint:user?.email||''})});
 }
 async function api(url,opt={}){
  const r=await fetch(url,{...opt,headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'}});
- if(r.status===401){tok=null;LS.del('pas_tok')}
- if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error?.message||('HTTP '+r.status));
- return r.json();
+ if(r.ok)return r.json();
+ const m=(await r.json().catch(()=>({}))).error?.message||('HTTP '+r.status);
+ if(r.status===401||/scope/i.test(m)){tok=null;LS.del('pas_tok');if(r.status===403)consent=true}
+ throw new Error(/scope/i.test(m)?'scope':m);
 }
 
 /* ---- Login ---- */
 async function login(){busy(true);try{
  await token();const u=await api('https://www.googleapis.com/oauth2/v3/userinfo');
  user={email:u.email,name:u.given_name||u.name||''};LS.set('pas_user',user);start();
-}catch(e){toast('No se pudo ingresar')}busy(false)}
+}catch(e){toast(e?.message==='scope'?errMsg(e):'No se pudo ingresar')}busy(false)}
 function start(){
  $('#who').textContent=user?.email||'';
  if(!user)return show('vLogin');
@@ -146,7 +151,7 @@ async function crear(){busy(true);try{
   sheets.push({properties:{title:t,hidden:true},data:[{rowData:[{values:[txt(JSON.stringify(v))]}]}]});
  const r=await api(SH,{method:'POST',body:JSON.stringify({properties:{title:'PASamelo · Datos',locale:'es_AR',timeZone:'America/Argentina/Buenos_Aires'},sheets})});
  conectar(r.spreadsheetId);toast('Hoja creada ✓');
-}catch(e){toast('Error: '+e.message)}busy(false)}
+}catch(e){toast(errMsg(e))}busy(false)}
 
 /* ---- Elegir hoja existente con Picker ---- */
 const loadPicker=()=>new Promise((res,rej)=>{if(window.google?.picker)return res();
@@ -156,11 +161,11 @@ async function elegir(){try{
  const t=await token();await loadPicker();
  new google.picker.PickerBuilder()
   .addView(new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST))
-  .setOAuthToken(t).setDeveloperKey(API_KEY).setAppId(APP_ID).setLocale('es-419').setTitle('Elegí tu hoja de PASamelo')
+  .setOAuthToken(t).setDeveloperKey(API_KEY).setAppId(APP_ID).setLocale('es-419').setTitle('Elegí tu hoja de PASamelo').setOrigin(location.origin)
   .setCallback(async d=>{if(d.action!==google.picker.Action.PICKED)return;const id=d.docs[0].id;busy(true);
-   try{if(await asegurar(id)!==false){conectar(id);toast('Hoja conectada ✓')}}catch(e){toast('Error: '+e.message)}busy(false)})
+   try{if(await asegurar(id)!==false){conectar(id);toast('Hoja conectada ✓')}}catch(e){toast(errMsg(e))}busy(false)})
   .build().setVisible(true);
-}catch(e){toast('No se pudo abrir el selector')}}
+}catch(e){toast(e?.message==='scope'?errMsg(e):'No se pudo abrir el selector')}}
 
 /* ---- Completar lo que falte en una hoja existente: pestañas y columnas nuevas (al final, sin mover nada) ---- */
 async function asegurar(id){
