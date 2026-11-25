@@ -52,6 +52,7 @@ dialog .add .btn,dialog .foot .btn{display:inline-block;width:auto;margin:0}
 #fDel{margin-right:auto!important;color:#9b2c2c;border-color:#9b2c2c}
 .draft{background:#b8954a22;border:1px solid #b8954a;border-radius:7px;padding:.4rem .6rem}
 .lnk{background:none;border:0;color:var(--verde2);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.ley{grid-column:1/-1;margin:0;color:#7a4a08;font-weight:600}.mini{font-size:.95rem;padding:0 .2rem}.sub{margin:-.5rem 0 .6rem}#askT{white-space:pre-line}.fld input[readonly]{background:transparent;border-style:dashed}
 .err{color:#9b2c2c;font-size:.9rem;min-height:1.2em}
 dialog h3{font:600 1rem Georgia,serif;color:var(--verde);margin:1rem 0 .2rem}
 </style></head><body>
@@ -97,7 +98,7 @@ dialog h3{font:600 1rem Georgia,serif;color:var(--verde);margin:1rem 0 .2rem}
   <p class="err" id="pwErr"></p><button class="btn" id="pwOk"></button></form></dialog>
 <dialog id="dAsk"><p id="askT"></p><div id="askB"></div></dialog>
 <dialog id="dPick"><p id="pkT"></p><input id="pkI"><div class="foot"><button class="btn sec" id="pkNo">Cancelar</button><button class="btn" id="pkOk">Aceptar</button></div></dialog>
-<dialog id="dF" class="big"><div class="top"><h2 id="fT"></h2><button class="ib" id="fX" title="Guardar y cerrar">✕</button></div>
+<dialog id="dF" class="big"><div class="top"><h2 id="fT"></h2><button class="ib" id="fCp" title="Copiar datos">📋</button><button class="ib" id="fX" title="Guardar y cerrar">✕</button></div><p class="muted sub" id="fS"></p>
  <p class="draft hide" id="fDr">Borrador sin guardar · <button class="lnk" id="fDrX" title="Descartar el borrador">Descartar</button></p>
  <div id="fB"></div>
  <div class="foot"><button class="btn sec" id="fDel" title="Borrar este registro">Borrar</button><button class="btn sec" id="fDesc" title="Cerrar sin guardar los cambios">Descartar</button><button class="btn" id="fOk" title="Guardar y cerrar">Listo</button></div></dialog>
@@ -105,7 +106,7 @@ dialog h3{font:600 1rem Georgia,serif;color:var(--verde);margin:1rem 0 .2rem}
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const APP_VERSION='6', SCHEMA=1,
+const APP_VERSION='7', SCHEMA=1,
  CLIENT_ID='562982844201-hitbnj8r42hi7es2fvlthl07ukrbg5pc.apps.googleusercontent.com',
  API_KEY='AIzaSyDF84n7vqE1BTyi4cTsaK8gsfHDIqGAcwE', APP_ID='562982844201',
  DRIVE='https://www.googleapis.com/auth/drive.file', SCOPE='openid email profile '+DRIVE,
@@ -333,7 +334,7 @@ function parseCSV(s){s=s.replace(/^﻿/,'');const l0=s.slice(0,s.indexOf('\n')>>
   else if(c==='\n'){r.push(f.replace(/\r$/,''));R.push(r);r=[];f=''}else f+=c}
  if(f||r.length){r.push(f.replace(/\r$/,''));R.push(r)}
  return R.filter(x=>x.some(v=>v!==''))}
-const BOOLX=new Set([...BOOL,...'favorita,codigo_abierto,adherida_cleas,limitrofes,incluido,visible,activo,mostrar,recomendada,rechazado,no_acepto'.split(',')]);
+const BOOLX={has:f=>BOOL.has(f)||/^(favorita|codigo_abierto|adherida_cleas|limitrofes|incluido|visible|activo|mostrar|recomendada|rechazado|no_acepto)$/.test(f)};
 const isDateX=f=>isDate(f)||/^(fecha|inicio|fin|desde|hasta|cubre_desde|cubre_hasta|vto_cuota|valida_hasta|flota_desde|flota_hasta)$/.test(f);
 const p2=n=>String(n).padStart(2,'0');
 function nFecha(v){v=String(v).trim();let m=v.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);if(m)return`${m[1]}/${p2(m[2])}/${p2(m[3])}`;
@@ -441,11 +442,11 @@ const norm=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(
 const si=v=>/^(true|1|-1|si|sí|verdadero|x)$/i.test(String(v??'').trim());
 const toIn=v=>String(v||'').replace(/\//g,'-').slice(0,10),fromIn=v=>v.replace(/-/g,'/');
 const SUBS=['RODADOS','EDIFICIOS','BIENES','CAUCIONES'];
-const subCat=c=>/auto|moto|cami|rodad|vehic|pick|utilit|cuatri/i.test(c)?'RODADOS':/hogar|edif|comerc|casa|depto|integral|consorc|inmueb/i.test(c)?'EDIFICIOS':/cauc/i.test(c)?'CAUCIONES':/bien|equipo|celu|notebook|bici|electr/i.test(c)?'BIENES':'';
+const subCat=c=>TSUB[TIPO(c)]||'';
 const sub=o=>SUBS.find(t=>DB.get(t,o.id_objeto))||subCat(o.categoria);
 const perName=p=>p?[p.apellido,p.nombre].filter(Boolean).join(', ')||'(sin nombre)':'';
 const nomina=id=>DB.list('OBJETO_PERSONA').filter(r=>r.id_objeto==id).sort((a,b)=>(!!a.hasta-!!b.hasta)||String(b.desde).localeCompare(String(a.desde)));
-function objName(o){if(!o)return'';const t=sub(o),s=t&&DB.get(t,o.id_objeto);if(s?.denominacion||o.nombre_referencia||o.descripcion)return s?.denominacion||o.nombre_referencia||o.descripcion;
+function objName(o){if(!o)return'';if(o.descripcion)return o.descripcion;const t=sub(o),s=t&&DB.get(t,o.id_objeto);if(s?.denominacion||o.nombre_referencia||o.descripcion)return s?.denominacion||o.nombre_referencia||o.descripcion;
  const n=nomina(o.id_objeto).filter(r=>!r.hasta),f=re=>n.filter(r=>re.test(r.rol)),p=[f(/titular|tomador/i),f(/asegurad/i),n].find(x=>x.length)||[];
  return[...new Set(p.map(r=>DB.get('PERSONAS',r.id_persona)?.apellido).filter(Boolean))].join(' - ')||s?.patente||'(sin nombre)'}
 let PL={},PLR={},OL={};
@@ -466,27 +467,89 @@ $('#lista').onclick=e=>{const r=e.target.closest('.row');r&&abrirF(LT,r.dataset.
 $('#bNuevo').onclick=()=>abrirF(LT,null);
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;b.dataset.t==='INICIO'?(show('vInicio'),paint()):verLista(b.dataset.t)};
 
-/* Ficha: campos estáticos por grupo */
-const FORM={
- PERSONAS:[['Datos','apellido,nombre,apodo,dni,cuit,fecha_nacimiento,estado_civil,condicion_fiscal,estado_relacion,actividad,hijos,tutear,saludar_cumple'],['Domicilio','calle,numero,dto,barrio,localidad,cp,provincia'],['Contacto','telefono,email,id_enviar_a,licencia_tipo,licencia_vto'],['Historial','historial']],
- OBJETOS:[['Objeto','categoria,descripcion,nombre_referencia,actividad,uso_moto,id_enviar_a,detalles']],
- RODADOS:[['Rodado','denominacion,marca,modelo,anio,patente,uso,origen,combustible,color,km,motor,chasis,rastreo_satelital,id_titular_registral']],
- EDIFICIOS:[['Edificio','denominacion,calle,numero,localidad,cp,provincia,id_titular_registral,m2_cubiertos,cantidad_pisos,tipo_construccion,rejas,cerradura_doble_paleta,linderos_riesgo,deteccion_humo_calor,red_hidrantes,rociadores,alarma_monitoreo,comunicacion_vivienda']],
- BIENES:[['Bien','denominacion,marca,modelo,anio_fabricacion,serie,suma_asegurada']],
- CAUCIONES:[['Caución','tipo_caucion,monto,moneda,documento_origen,nro_documento,fecha_documento,objeto_contrato,domicilio_riesgo,ref1,ref2,ref3,vigencia_requerida,tipo_alquiler,alquiler_monto,deposito_incluye,deposito_monto,contrato_anios,contrato_inicio,contrato_fin,inmueble_localidad,inmueble_cp,doc_respaldo']]};
+/* Ficha: clon de F_PERSONAS y F_OBJETOS del Access (RecetaPersonas/RecetaObjetos de modPolV3 + código de los formularios) */
 const sset=s=>new Set(s.split(','));
+const TIPO=c=>{const n=norm(c).trim();return!n?'':n.startsWith('caucio')?'caucion':n.startsWith('rodado')?'rodado':n.startsWith('edific')?'edificio':n.startsWith('flota')?'flota':n.startsWith('persona')?'personas':/^(bien|objeto)/.test(n)?'bien':'otro'};
+const TSUB={rodado:'RODADOS',edificio:'EDIFICIOS',bien:'BIENES',caucion:'CAUCIONES'};
+const CATN=['Rodado','Edificio','Bien','Caución','Personas','Flota','Otro'],CATT=['rodado','edificio','bien','caucion','personas','flota','otro'];
+const catVal=tp=>{for(const r of DB.list('LISTAS'))if(r.lista=='categoria'&&TIPO(r.valor)===tp)return r.valor;return DB.list('OBJETOS').find(o=>TIPO(o.categoria)===tp)?.categoria||tp};
+const FORM={
+ PERSONAS:[['Datos personales','leyenda,apellido,nombre,apodo,dni,cuit,condicion_fiscal,fecha_nacimiento,edad,estado_civil,hijos,actividad,licencia_tipo,licencia_vto'],['Contacto','telefono,email,tutear,saludar_cumple'],['Domicilio','calle,numero,dto,barrio,localidad,cp,provincia'],['Relaciones','estado_relacion,id_enviar_a']],
+ OBJETOS:[['Datos generales','leyenda,categoria,nombre_referencia,actividad,uso_moto']],
+ RODADOS:'denominacion,marca,modelo,anio,combustible,uso,origen,patente,color,motor,chasis,km,rastreo_satelital,id_flota,flota_desde,flota_hasta',
+ EDIFICIOS:'denominacion,tipo_construccion,calle,numero,localidad,cp,provincia,m2_cubiertos,cantidad_pisos,rejas,cerradura_doble_paleta,deteccion_humo_calor,red_hidrantes,rociadores,alarma_monitoreo,linderos_riesgo,comunicacion_vivienda',
+ BIENES:'denominacion,marca,modelo,serie,anio_fabricacion,suma_asegurada',
+ CAUCIONES:'tipo_caucion,monto,moneda,documento_origen,nro_documento,fecha_documento,objeto_contrato,domicilio_riesgo,ref1,ref2,ref3,vigencia_requerida,tipo_alquiler,alquiler_monto,deposito_incluye,deposito_monto,contrato_anios,contrato_inicio,contrato_fin,inmueble_localidad,inmueble_cp,doc_respaldo'};
+const CAP={rodado:['Datos del rodado','Personas asociadas'],edificio:['Datos del edificio','Titular registral'],bien:['Datos del bien','Personas vinculadas (titular)'],caucion:['Datos de la caución','Tomador y asegurado / beneficiario'],
+ personas:['Nómina de personas','Personas','Nómina abajo. Los datos de cada persona se corrigen en su ficha (👁).'],flota:['Autos de la flota','Personas','Las flotas no llevan personas: cada auto tiene su titular.'],
+ otro:['Datos','Personas vinculadas','','Esta categoría no lleva datos propios. Cargá las personas arriba y usá Detalles para el resto.'],'':['Datos','Personas','Elegí la categoría.','Elegí la categoría para ver los campos que corresponden.']};
+const ALQ=['tipo_alquiler','alquiler_monto','deposito_incluye','deposito_monto','contrato_anios','contrato_inicio','contrato_fin','inmueble_localidad','inmueble_cp'];
 const BOOL=sset('tutear,saludar_cumple,uso_moto,rastreo_satelital,rejas,cerradura_doble_paleta,linderos_riesgo,deteccion_humo_calor,red_hidrantes,rociadores,alarma_monitoreo,comunicacion_vivienda,deposito_incluye,doc_respaldo');
-const LST=sset('estado_relacion,estado_civil,condicion_fiscal,licencia_tipo,provincia,actividad,categoria,origen,uso,marca,combustible,color,tipo_construccion,tipo_caucion,moneda,documento_origen,tipo_alquiler,vigencia_requerida,vinculo,rol,barrio');
+const LST=sset('estado_civil,condicion_fiscal,licencia_tipo,provincia,actividad,categoria,origen,uso,marca,combustible,color,tipo_construccion,tipo_caucion,moneda,documento_origen,tipo_alquiler,vigencia_requerida,vinculo,rol,barrio,denominacion');
 const PER=sset('id_enviar_a,id_titular_registral'),LOC=sset('localidad,inmueble_localidad'),AREA=sset('historial,detalles,objeto_contrato');
-const isDate=f=>/^fecha_|_vto$|^contrato_(inicio|fin)$/.test(f);
-const LBL={dni:'DNI',cuit:'CUIT',cp:'CP',dto:'Dto.',anio:'Año',anio_fabricacion:'Año de fabricación',telefono:'Teléfono',id_enviar_a:'Enviar docum. a',id_titular_registral:'Titular registral',numero:'Número',m2_cubiertos:'m² cubiertos',km:'Km',uso_moto:'Es moto',descripcion:'Descripción',denominacion:'Denominación',condicion_fiscal:'Condición fiscal',licencia_tipo:'Licencia',licencia_vto:'Vto. licencia',fecha_nacimiento:'Nacimiento',estado_relacion:'Relación',saludar_cumple:'Saludar en el cumple',nombre_referencia:'Nombre de referencia',rastreo_satelital:'Rastreo satelital',cerradura_doble_paleta:'Cerradura doble paleta',deteccion_humo_calor:'Detección de humo/calor',comunicacion_vivienda:'Comunica con vivienda',linderos_riesgo:'Linderos de riesgo',red_hidrantes:'Red de hidrantes',alarma_monitoreo:'Alarma con monitoreo',tipo_construccion:'Tipo de construcción',cantidad_pisos:'Pisos',ref1:'Ref. 1',ref2:'Ref. 2',ref3:'Ref. 3',doc_respaldo:'Docum. respaldatoria',inmueble_cp:'CP del inmueble',inmueble_localidad:'Localidad del inmueble',tipo_caucion:'Tipo de caución',nro_documento:'Nº de documento',fecha_documento:'Fecha del documento',documento_origen:'Documento de origen',objeto_contrato:'Objeto del contrato',domicilio_riesgo:'Domicilio del riesgo',alquiler_monto:'Alquiler',deposito_incluye:'Incluye depósito',deposito_monto:'Depósito',contrato_anios:'Años de contrato',contrato_inicio:'Inicio del contrato',contrato_fin:'Fin del contrato',vigencia_requerida:'Vigencia requerida',tipo_alquiler:'Tipo de alquiler',suma_asegurada:'Suma asegurada',estado_civil:'Estado civil'};
+const REQ={PERSONAS:sset('apellido,dni,localidad,cp'),OBJETOS:sset('categoria'),RODADOS:sset('marca,modelo,anio,combustible'),EDIFICIOS:sset('id_titular_registral,localidad,m2_cubiertos,cantidad_pisos'),BIENES:sset('denominacion'),CAUCIONES:sset('tipo_caucion,monto')};
+const isDate=f=>/^fecha_|_vto$|^contrato_(inicio|fin)$|^flota_/.test(f);
+const LBL={categoria:'Categoría',dni:'DNI',cuit:'CUIT',cp:'CP',dto:'Dto / Piso',anio:'Año',anio_fabricacion:'Año fabric.',telefono:'Teléfono',id_enviar_a:'Enviar docum. a',id_titular_registral:'Titular registral',numero:'Número',m2_cubiertos:'m² cubiertos',km:'Km',uso_moto:'Usa moto',denominacion:'Denominación',condicion_fiscal:'Condición fiscal',licencia_tipo:'Tipo de licencia',licencia_vto:'Vto. licencia',fecha_nacimiento:'Nacimiento',estado_relacion:'Relación (auto)',saludar_cumple:'Saludar en el cumpleaños',nombre_referencia:'Nombre de ref.',rastreo_satelital:'Rastreo satelital',cerradura_doble_paleta:'Cerradura doble paleta',deteccion_humo_calor:'Detección de humo/calor',comunicacion_vivienda:'Comunica con vivienda',linderos_riesgo:'Linderos de riesgo',red_hidrantes:'Red de hidrantes',alarma_monitoreo:'Alarma con monitoreo',tipo_construccion:'Construcción',cantidad_pisos:'Pisos',serie:'N° de serie',doc_respaldo:'Docum. respaldatoria',inmueble_cp:'CP del inmueble',inmueble_localidad:'Localidad del inmueble',tipo_caucion:'Tipo',nro_documento:'Nº / expediente',fecha_documento:'Fecha del doc.',documento_origen:'Doc. origen',objeto_contrato:'Objeto contrato',domicilio_riesgo:'Dom. del riesgo',alquiler_monto:'Alquiler',deposito_incluye:'Incluye depósito',deposito_monto:'Depósito',contrato_anios:'Años de contrato',contrato_inicio:'Inicio del contrato',contrato_fin:'Fin del contrato',vigencia_requerida:'Vigencia requerida',tipo_alquiler:'Tipo de alquiler',suma_asegurada:'Suma asegurada',estado_civil:'Estado civil',id_flota:'Flota',flota_desde:'En la flota desde',flota_hasta:'En la flota hasta'};
 const lbl=f=>LBL[f]||(f[0].toUpperCase()+f.slice(1)).replace(/_/g,' ');
-function inp(k,f,v){const a=`data-k="${k}:${f}"`;
- if(BOOL.has(f))return`<label class="chk"><input type="checkbox" ${a}${si(v)?' checked':''}> ${lbl(f)}</label>`;
+const dig=s=>String(s??'').replace(/\D/g,''),fmtD=v=>v?String(v).slice(0,10).split('/').reverse().join('/'):'';
+const edad=f=>{if(!f)return'';const[y,m,d]=String(f).split('/').map(Number),n=new Date(),e=n.getFullYear()-y-((n.getMonth()+1)*100+n.getDate()<m*100+d?1:0);return e>=0&&e<150?e+' años':''};
+const unir=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a.at(-1);
+const usaComb=d=>/^(auto|camioneta|camion)$/.test(norm(d).trim());
+const etiqRef=t=>{t=norm(t);return/alquiler/.test(t)?['Inmobiliaria','Propietario / locador','Referencia']:/servicio/.test(t)?['Nº de cliente','Nº de contrato','Empresa']:/oferta|cumplimiento|anticipo|reparo/.test(t)?['Nº licitación / compra','Organismo','Obra o servicio']:/aduan/.test(t)?['Nº de destinación','Aduana','Despachante']:/judicial/.test(t)?['Expediente','Juzgado','Carátula']:/director/.test(t)?['Sociedad','Cargo','Período del mandato']:['Referencia 1','Referencia 2','Referencia 3']};
+const VINV={'hijo/a':'Padre / Madre','padre / madre':'Hijo/a','abuelo/a':'Nieto/a','nieto/a':'Abuelo/a','tío/a':'Sobrino/a','sobrino/a':'Tío/a','suegro/a':'Yerno / Nuera','yerno / nuera':'Suegro/a','empleador/a':'Empleado/a','empleado/a':'Empleador/a','referente':'Referido/a','referido/a':'Referente'};
+const vincInv=v=>VINV[String(v??'').trim().toLowerCase()]||String(v??'').trim();
+/* Mayúscula inicial (NomPropio de modCompartido) */
+const NPU=sset('sa,srl,sas,sau,sh,sgr');
+function nomPropio(v){let prev='';return String(v??'').replace(/\t/g,' ').replace(/ +/g,' ').trim().split(' ').map((p,i)=>{const lo=p.toLowerCase(),up=p.toUpperCase();let r;
+ if(!p||/\d/.test(p)||(p!==lo&&p!==up&&p.slice(1)!==p.slice(1).toLowerCase()))r=p;else if(NPU.has(lo.replace(/\./g,'')))r=up;
+ else if(p.length>1&&p===up&&/^[IVXL]+$/.test(p))r=p;else if(i&&(['de','del','y','e'].includes(lo)||(['la','las','los','el'].includes(lo)&&prev==='de')))r=lo;
+ else{r='';let g=true;for(const c of lo){r+=g?c.toUpperCase():c;g="-'./".includes(c)}}prev=r.toLowerCase();return r}).join(' ')}
+function npAplicar(r){for(const f of['apellido','nombre','calle','barrio','provincia'])if(r[f])r[f]=nomPropio(r[f]);
+ if(r.localidad){const L=DB.list('LOCALIDADES').find(x=>String(x.localidad).toLowerCase()===r.localidad.trim().toLowerCase());r.localidad=L?L.localidad:nomPropio(r.localidad)}}
+/* Relación automática (modRelacion.RelRecalcularTodo) */
+function relAll(){const H=hoy(),S=()=>new Set(),vig=S(),ant=S(),ter=S(),ase=S(),tom=S(),tit=S(),ad=(s,v)=>v&&s.add(String(v)),pv=S(),po=S();
+ for(const p of DB.list('POLIZAS')){ad(tom,p.id_tomador);ad(po,p.id_objeto);if(norm(p.estado_manual||'activa')!=='anulada'&&(p.fin||'')>=H){ad(vig,p.id_tomador);ad(pv,p.id_objeto)}}
+ for(const o of DB.list('OBJETO_PERSONA')){ad(ase,o.id_persona);pv.has(String(o.id_objeto))&&ad(vig,o.id_persona);po.has(String(o.id_objeto))&&ad(ant,o.id_persona);norm(o.rol)==='titular'&&ad(tit,o.id_persona)}
+ for(const t of['RODADOS','EDIFICIOS'])for(const r of DB.list(t))ad(tit,r.id_titular_registral);
+ for(const s of DB.list('SINIESTRO_PARTICIPANTES'))ad(/^tercero/i.test(s.rol||'')?ter:ase,s.id_persona);
+ for(const r of DB.list('RECLAMOS')){ad(ter,r.id_persona_contraria);ad(si(r.cerrado)||/^(cerrado|yes)$/i.test(r.cerrado)?ant:vig,r.id_persona_cliente)}
+ const m=new Map();for(const p of DB.list('PERSONAS')){const k=String(p.id_persona),a=[];
+  if(vig.has(k))a.push('Cliente');else if(!tom.has(k)&&!ant.has(k)&&!ter.has(k))a.push('Prospecto');
+  ase.has(k)&&a.push('Asegurado');tom.has(k)&&a.push('Tomador');tit.has(k)&&a.push('Titular de objeto');
+  !vig.has(k)&&(tom.has(k)||ant.has(k))&&a.push('Ex-cliente');ter.has(k)&&a.push('Tercero');m.set(k,a.join(' · '))}
+ return m}
+let rT,REL=new Map();
+const relSync=()=>{clearTimeout(rT);rT=setTimeout(()=>{if(!D)return;const m=relAll();for(const p of DB.list('PERSONAS')){const v=m.get(String(p.id_persona));if((p.estado_relacion||'')!==v){p.estado_relacion=v;mark('PERSONAS',p.id_persona,'up')}}},600)};
+/* Descripción del objeto (DescObjeto2 / ObjRefPersonas) */
+const opsDe=id=>id?DB.list('OBJETO_PERSONA').filter(x=>x.id_objeto==id):[];
+const pNom=id=>{const p=DB.get('PERSONAS',id);return p?.tomador||perName(p)};
+function refPers(id){const ns=opsDe(id).sort((a,b)=>(!!a.hasta-!!b.hasta)),ap=re=>[...new Set(ns.filter(n=>re.test(n.rol||'')).map(n=>DB.get('PERSONAS',n.id_persona)?.apellido).filter(Boolean))].join(' - ');
+ return ap(/^(titular|tomador)$/i)||ap(/asegurad/i)}
+function descObj(o,s){const ref=(o.nombre_referencia||'').trim(),act=(o.actividad||'').trim(),tp=TIPO(o.categoria),hay=Object.entries(s).some(([k,v])=>k!=='id_objeto'&&v),ops=opsDe(o.id_objeto);let d=ref;
+ if(tp==='rodado'&&hay){const pa=s.patente||'',P=pa.toUpperCase(),R=ref.toUpperCase();d=pa&&(R===P||R.startsWith(P+' '))?(R===P?ref+' '+(s.marca||''):ref):pa+' '+(ref||s.marca||'')}
+ else if(tp==='edificio'&&hay)d=norm(s.denominacion).trim()==='hogar'?'Hogar '+(s.calle||'')+' '+(s.numero||''):(s.denominacion||'')+' '+(ref||(s.calle||'')+' '+(s.numero||''));
+ else if(tp==='bien'&&hay)d=(s.denominacion||'')+' '+(ref||s.marca||'');
+ else if(tp==='personas'){const a=ops.filter(x=>norm(x.rol)==='asegurado').map(x=>DB.get('PERSONAS',x.id_persona)).filter(Boolean).sort((a,b)=>String(a.apellido).localeCompare(b.apellido,'es')),n=a.length;
+  if(n===1)d=[a[0].nombre,a[0].apellido].filter(Boolean).join(' ')+(act?' - '+act:'');else if(n>1)d=`${n} personas ${act} (${a.slice(0,3).map(p=>p.apellido||'').join(', ')}${n>3?'...':''})`}
+ else if(tp==='flota')d='Flota '+DB.list('RODADOS').filter(r=>r.id_flota==o.id_objeto).length+' autos '+ref;
+ else if(tp==='caucion'){const a=ops.find(x=>/^(asegurado|beneficiario)$/i.test(x.rol||''));d='Caución'+(s.tipo_caucion?' '+s.tipo_caucion:'')+(a?' · '+pNom(a.id_persona):'')+(ref?' · '+ref:'')}
+ return d.replace(/\s+/g,' ').trim().slice(0,255)}
+function descFor(id){const o=DB.get('OBJETOS',id);if(!o)return;const tp=TIPO(o.categoria),st=TSUB[tp],s=st&&DB.get(st,id)||{},u={};
+ if(tp==='personas'&&!(o.nombre_referencia||'').trim()&&!(o.actividad||'').trim()){const x=refPers(id);if(x)u.nombre_referencia=x.slice(0,255)}
+ const d=descObj({...o,...u},s);if(d!==(o.descripcion||''))u.descripcion=d;
+ if(Object.keys(u).length){DB.save('OBJETOS',{...o,...u});if(F?.id==id)Object.assign(F.r,u)}}
+/* Campos */
+function inp(k,f,v){const a=`data-k="${k}:${f}"`,st=REQ[k==='m'?F.t:F.st]?.has(f)?' *':'';
+ if(f==='leyenda')return'<p class="ley hide" id="fLey"></p>';
+ if(f==='edad')return`<label class="fld" data-f="edad"><span>Edad</span><input readonly tabindex="-1" id="fEdad"></label>`;
+ if(f==='estado_relacion')return`<label class="fld w" data-f="${f}"><span>${lbl(f)}</span><input readonly tabindex="-1" value="${esc(REL.get(String(F.id))||'')}"></label>`;
+ if(BOOL.has(f))return`<label class="chk" data-f="${f}"><input type="checkbox" ${a}${si(v)?' checked':''}> ${lbl(f)}</label>`;
  const h=AREA.has(f)?`<textarea ${a} rows="3">${esc(v)}</textarea>`:isDate(f)?`<input type="date" ${a} value="${toIn(v)}">`
   :PER.has(f)?`<input ${a} data-per list="dlPer" value="${esc(PLR[v]||'')}" placeholder="Buscar persona">`
+  :f==='id_flota'?`<input ${a} data-flo list="dlFlo" value="${esc(FLOR[v]||'')}" placeholder="Sin flota">`
   :`<input ${a} value="${esc(v)}"${LST.has(f)||LOC.has(f)?` list="dl_${f}"`:''}>`;
- return`<label class="fld${AREA.has(f)?' w':''}"><span>${lbl(f)}</span>${h}</label>`}
+ const x=f==='telefono'?' <button class="ib mini" data-a="wsp" title="Abrir WhatsApp">💬</button>':'';
+ return`<label class="fld${AREA.has(f)?' w':''}" data-f="${f}"><span>${lbl(f)}${st}${x}</span>${h}</label>`}
 /* Combos: valores de LISTAS (lista = nombre del campo) + los ya usados; localidades de LOCALIDADES */
 function dl(f){let e=document.getElementById('dl_'+f);if(!e){e=document.createElement('datalist');e.id='dl_'+f;$('#dls').append(e)}
  const s=new Set(),src=LOC.has(f)?['localidad',f]:[f];
@@ -494,76 +557,199 @@ function dl(f){let e=document.getElementById('dl_'+f);if(!e){e=document.createEl
  if(LOC.has(f))for(const r of DB.list('LOCALIDADES'))s.add(r.localidad);
  for(const t in T)for(const c of src)if(T[t].split(',').includes(c))for(const r of DB.list(t))r[c]&&s.add(r[c]);
  e.innerHTML=[...s].filter(Boolean).sort((a,b)=>String(a).localeCompare(b,'es')).map(v=>`<option value="${esc(v)}">`).join('')}
-
-let F=null;
+let F=null,FLO={},FLOR={},FLR={};
 const drK=(t,id)=>'pas_dr_'+sid+'_'+t+'_'+(id||'nuevo');
-async function abrirF(t,id){perMap();let r=id?{...DB.get(t,id)}:{},st='',s={};const dr=LS.get(drK(t,id));
- if(t==='OBJETOS'){if(id)st=sub(r);else if(!dr){const C=['Rodado','Edificio','Bien','Caución','Personas','Otro'],i=await ask('¿Qué querés agregar?',[...C,'Cancelar']);
-   if(i===C.length)return;r.categoria=C[i];st=SUBS[i]||''}
-  if(st)s={...(DB.get(st,id)||{})}}
+async function abrirF(t,id,per){perMap();let r=id?{...DB.get(t,id)}:{},st='',s={};const dr=LS.get(drK(t,id));
+ if(t==='PERSONAS')delete r.estado_relacion;
+ if(t==='OBJETOS'){if(id)st=sub(r);else if(!dr){const i=await ask('¿Qué querés agregar?',[...CATN,'Cancelar']);if(i===CATN.length)return;const tp=CATT[i];r.categoria=catVal(tp);st=TSUB[tp]||'';
+   if(per&&tp==='rodado')s={id_titular_registral:per,combustible:'SIN GNC'};
+   if(per&&tp==='edificio')s={id_titular_registral:per,cantidad_pisos:'0',tipo_construccion:'Mampostería - techo de hormigón',provincia:'Córdoba'}}
+  if(st&&id)s={...(DB.get(st,id)||{})}}
  const o=JSON.stringify([r,s]);if(dr)({r,s,st}=dr);
- F={t,id,r,s,st,o};$('#fDr').classList.toggle('hide',!dr);renderF();$('#dF').showModal()}
+ F={t,id,r,s,st,o,per:per||'',delSub:''};$('#fDr').classList.toggle('hide',!dr);renderF();if(!dr)F.o=JSON.stringify([F.r,F.s]);$('#dF').showModal()}
 const grupo=(g,k,fs,o)=>`<fieldset><legend>${g}</legend><div class="grid">${fs.split(',').map(f=>inp(k,f,o[f])).join('')}</div></fieldset>`;
-function renderF(){const{t,r,s,st}=F;
- $('#fT').textContent=t==='PERSONAS'?(F.id?perName(r):'Nueva persona'):(F.id?objName(r):'Nuevo objeto');
- $('#fB').innerHTML=FORM[t].map(([g,fs])=>grupo(g,'m',fs,r)).join('')+(st?grupo(FORM[st][0][0],'s',FORM[st][0][1],s)+(st==='EDIFICIOS'?'<p class="muted" id="titInfo"></p>':''):'')
-  +(t==='PERSONAS'?secVinc()+secPerObj():secNomina());
- for(const e of $('#fB').querySelectorAll('[list^="dl_"]'))dl(e.getAttribute('list').slice(3));
- titInfo();$('#fDel').classList.toggle('hide',!F.id)}
+const area=(g,f,o)=>`<fieldset><legend>${g}</legend><div class="grid">${inp('m',f,o[f])}</div></fieldset>`;
+function renderF(){const{t,r,st}=F,P=t==='PERSONAS',tp=TIPO(r.categoria);REL=P?relAll():REL;
+ $('#fT').textContent=P?(F.id?perName(r):'Nueva persona'):(F.id?objName(r):'Nuevo objeto');
+ $('#fS').textContent=P?(REL.get(String(F.id))||''):(r.categoria||'');
+ let h=FORM[t].map(([g,fs])=>grupo(g,'m',fs,r)).join('');
+ if(P)h+=secVinc()+secPerObj()+(F.id?relList(perObjs(F.id),F.id)+secNotas('id_persona'):'')+area('Historial','historial',r);
+ else{const C=CAP[tp]||CAP[''];if(st==='RODADOS')flotas();
+  h+=`<fieldset><legend>${C[1]}</legend>${secPer(tp,C)}</fieldset><fieldset><legend>${C[0]}</legend>${secFic(tp,C)}</fieldset>`+area('Detalles','detalles',r)+(F.id?relList([F.id])+secNotas('id_objeto'):'')}
+ if(F.id)h+=`<p class="muted">Creado: ${fmtD(r.fecha_creacion)||'—'} · Modificado: ${fmtD(r.fecha_modificacion)||'—'}</p>`;
+ $('#fB').innerHTML=h;for(const e of $('#fB').querySelectorAll('[list^="dl_"]'))dl(e.getAttribute('list').slice(3));
+ titInfo();upVis();$('#fDel').classList.toggle('hide',!F.id)}
+function flotas(){FLO={};FLOR={};const o=[];for(const x of DB.list('OBJETOS'))if(TIPO(x.categoria)==='flota'&&x.id_objeto!=F.id){let l=objName(x);if(FLO[l])l+=' · '+String(x.id_objeto).slice(-4);FLO[l]=x.id_objeto;FLOR[x.id_objeto]=l;o.push(`<option value="${esc(l)}">`)}
+ let e=$('#dlFlo');if(!e){e=document.createElement('datalist');e.id='dlFlo';$('#dls').append(e)}e.innerHTML=o.join('')}
 function leerF(){for(const e of $('#fB').querySelectorAll('[data-k]')){const[k,f]=e.dataset.k.split(':'),o=k==='m'?F.r:F.s;
- o[f]=e.type==='checkbox'?(e.checked?'TRUE':o[f]?'FALSE':''):e.type==='date'?fromIn(e.value):'per'in e.dataset?(PL[e.value]||''):e.value.trim()}}
-function guardarF(){leerF();const{t,r,s,st}=F;if(JSON.stringify([r,s])===F.o){LS.del(drK(t,F.id));return true}
- const falta=t==='PERSONAS'?!r.apellido&&!r.nombre&&'el apellido o el nombre':st==='RODADOS'&&!s.denominacion?'la denominación':!r.categoria&&'la categoría';
- if(falta){LS.set(drK(t,F.id),{r,s,st});toast('Falta '+falta+': quedó como borrador');return false}
- LS.del(drK(t,F.id));F.r={...DB.save(t,r)};F.id=F.r[pk(t)];if(st){s.id_objeto=F.id;F.s={...DB.save(st,s)}}
- F.o=JSON.stringify([F.r,F.s]);$('#fDr').classList.add('hide');return true}
-function cerrarF(){guardarF();$('#dF').close();F=null;renderLista()}
+ o[f]=e.type==='checkbox'?(e.checked?'TRUE':o[f]?'FALSE':''):e.type==='date'?fromIn(e.value):'per'in e.dataset?(PL[e.value]||''):'flo'in e.dataset?(FLO[e.value]||''):e.value.trim()}}
+/* Obligatorios (FaltanPersona / FaltanObjeto2) */
+function faltan(){const{t,r,s}=F,a=[],e=(v,l)=>!String(v??'').trim()&&a.push(l);
+ if(t==='PERSONAS'){e(r.apellido,'Apellido');e(r.dni,'DNI');e(r.cp,'Código postal');e(r.localidad,'Localidad');return a}
+ const tp=TIPO(r.categoria),ops=opsDe(F.id);
+ if(tp==='rodado'){e(s.denominacion,'Denominación');e(s.marca,'Marca');e(s.modelo,'Modelo');e(s.anio,'Año');usaComb(s.denominacion)&&e(s.combustible,'Combustible')}
+ if(tp==='edificio'){e(s.cp,'Código postal');e(s.id_titular_registral,'Titular registral');e(s.localidad,'Localidad');e(s.m2_cubiertos,'m² cubiertos');e(s.cantidad_pisos,'Cantidad de pisos')}
+ if(tp==='bien')e(s.denominacion,'Denominación');
+ if(tp==='personas'&&!ops.length)a.push('Nómina (al menos una persona)');
+ if(tp==='caucion'){e(s.tipo_caucion,'Tipo de caución');e(s.monto,'Monto');ops.some(o=>/^(tomador|titular)$/i.test(o.rol||''))||F.per||a.push('Tomador')}
+ return a}
+function upVis(){const v=f=>$(`#fB [data-k$=":${f}"]`),sh=(f,on)=>{const l=$(`#fB [data-f="${f}"]`);l&&l.classList.toggle('hide',!on)};
+ const tp=TIPO(v('categoria')?.value);sh('actividad',tp==='personas');sh('uso_moto',tp==='personas');
+ sh('combustible',usaComb(v('denominacion')?.value));const fl=!!v('id_flota')?.value;sh('flota_desde',fl);sh('flota_hasta',fl);
+ const tc=v('tipo_caucion');if(tc){const e=etiqRef(tc.value);[1,2,3].forEach(i=>{const s=$(`#fB [data-f="ref${i}"] span`);if(s)s.textContent=e[i-1]});const al=/alquiler/i.test(tc.value);ALQ.forEach(f=>sh(f,al))}
+ const ed=$('#fEdad'),fn=v('fecha_nacimiento');if(ed&&fn)ed.value=edad(fromIn(fn.value));
+ const ly=$('#fLey');if(ly){leerF();const s=unir(faltan());ly.textContent=s?'Falta completar: '+s+'.':'';ly.classList.toggle('hide',!s)}}
+function valPer(r){if(!(r.apellido||r.nombre||r.dni))return'Escribí al menos el apellido, el nombre o el DNI.';
+ if(r.dni){const d=dig(r.dni);if(/[^\d. ]/.test(r.dni)||d.length<7||d.length>8)return'El DNI debe tener 7 u 8 números.';r.dni=d;const o=DB.list('PERSONAS').find(p=>p.dni==d&&p.id_persona!=F.id);if(o)return'Ya existe una persona con ese DNI: '+perName(o)+'.'}
+ if(r.cuit){if(dig(r.cuit).length!==11)return'El CUIT debe tener 11 números.';r.cuit=dig(r.cuit)}
+ if(r.email){r.email=r.email.toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(r.email))return'El email no parece válido (ej: nombre@correo.com).'}
+ if(r.telefono){const n=dig(r.telefono).length;if(/[^\d+()\-. ]/.test(r.telefono)||n<8||n>15)return'Teléfono inválido: usá solo números (de 8 a 15 dígitos); puede llevar +, ( ) o guiones.'}
+ if(r.fecha_nacimiento&&r.fecha_nacimiento>hoy())return'La fecha de nacimiento no puede ser futura.';
+ if(r.id_enviar_a&&r.id_enviar_a==F.id){r.id_enviar_a='';toast('Una persona no puede ser su propio «enviar a»: quedó vacío.')}
+ return''}
+/* Guardar: true = guardado o sin cambios · 'dr' = quedó borrador · false = sigue abierta */
+async function guardarF(force){leerF();const{t,r,s}=F;if(JSON.stringify([r,s])===F.o&&!F.delSub&&(F.id||!force)){LS.del(drK(t,F.id));return true}
+ const no=async m=>{if(await ask(m,['Dejar borrador','Corregir']))return false;LS.set(drK(t,F.id),{r,s,st:F.st});return'dr'};
+ if(t==='PERSONAS'){npAplicar(r);const m=valPer(r);if(m)return no(m)}
+ else{if(!r.categoria)return no('Falta el campo obligatorio: Categoría.');
+  if(TIPO(r.categoria)!=='personas'){r.actividad='';if(si(r.uso_moto))r.uso_moto='FALSE'}
+  if(F.st==='RODADOS'){if(s.id_flota&&s.id_flota==F.id)return no('Un rodado no puede ser su propia flota.');if(!s.id_flota)s.flota_desde=s.flota_hasta=''}}
+ const fa=t==='PERSONAS'||['edificio','caucion'].includes(TIPO(r.categoria))?unir(faltan()):'';
+ if(fa&&await ask(`Falta completar: ${fa}.\n¿Querés guardar igual?`,['Guardar igual','No']))return false;
+ LS.del(drK(t,F.id));const nuevo=!F.id;F.r={...DB.save(t,r)};F.id=F.r[pk(t)];
+ if(t==='OBJETOS'){const id=F.id,tp=TIPO(F.r.categoria);
+  if(F.delSub){DB.get(F.delSub,id)&&DB.del(F.delSub,id);F.delSub=''}
+  if(F.st){s.id_objeto=id;F.s={...DB.save(F.st,s)}}
+  if(nuevo&&F.per&&['personas','caucion','bien','otro'].includes(tp))DB.save('OBJETO_PERSONA',{id_objeto:id,id_persona:F.per,rol:tp==='personas'||tp==='caucion'?'Tomador':'Titular',desde:hoy(),hasta:''});
+  F.per='';descFor(id);if(F.s.id_flota)descFor(F.s.id_flota)}
+ F.o=JSON.stringify([F.r,F.s]);$('#fDr').classList.add('hide');relSync();return true}
+async function cerrarF(){if(!F)return;if(!await guardarF())return;$('#dF').close();F=null;renderLista()}
 $('#fX').onclick=$('#fOk').onclick=cerrarF;$('#dF').oncancel=e=>{e.preventDefault();cerrarF()};
 $('#fDesc').onclick=async()=>{leerF();if(JSON.stringify([F.r,F.s])!==F.o&&await ask('¿Descartar los cambios?',['Descartar','No']))return;LS.del(drK(F.t,F.id));$('#dF').close();F=null};
 $('#fDrX').onclick=async()=>{if(await ask('¿Descartar el borrador?',['Descartar','No']))return;const{t,id}=F;LS.del(drK(t,id));$('#dF').close();F=null;id&&abrirF(t,id)};
+/* Listas dentro de la ficha */
 const fila=(txt,btns,cls='')=>`<div class="li${cls}"><span>${txt}</span>${btns}</div>`;
 const bt=(a,id,ic,ti,t='')=>`<button class="ib" data-a="${a}" data-id="${esc(id)}"${t?` data-t="${t}"`:''} title="${ti}">${ic}</button>`;
-const alta=(dl,ph,a,ti)=>`<div class="add"><input list="dlPer" id="aP" data-pick placeholder="Persona"><input list="${dl}" id="aV" placeholder="${ph}"><button class="btn sec" data-a="${a}" title="${ti}">Agregar</button></div>`;
-function secVinc(){const id=F.id,vs=id?DB.list('VINCULOS').filter(v=>v.id_persona==id||v.id_vinculado==id):[];
- return`<fieldset><legend>Vínculos</legend>${vs.map(v=>{const o=v.id_persona==id?v.id_vinculado:v.id_persona;
-  return fila(`${esc(v.vinculo||'—')}${v.id_persona!=id?' <span class="muted" title="Cargado desde la otra persona">↩</span>':''} · ${esc(perName(DB.get('PERSONAS',o)))}`,bt('ver',o,'👁','Ver persona','PERSONAS')+bt('delv',v.id_vinculo,'×','Quitar vínculo'))}).join('')}
-  ${alta('dl_vinculo','Vínculo (ej.: referido)','addv','Agregar vínculo')}</fieldset>`}
-function secPerObj(){const ns=F.id?DB.list('OBJETO_PERSONA').filter(n=>n.id_persona==F.id):[];if(!ns.length)return'';
- return`<fieldset><legend>Objetos</legend>${ns.map(n=>fila(`${esc(objName(DB.get('OBJETOS',n.id_objeto)))} <span class="muted">${esc(n.rol||'')}${n.hasta?' · hasta '+esc(n.hasta):''}</span>`,bt('ver',n.id_objeto,'👁','Ver objeto','OBJETOS'),n.hasta?' fin':'')).join('')}</fieldset>`}
+const alta=(dl,ph,a,ti)=>`<div class="add"><input list="dlPer" id="aP" data-pick placeholder="Persona">${dl?`<input list="${dl}" id="aV" placeholder="${ph}">`:''}<button class="btn sec" data-a="${a}" title="${ti}">Agregar</button></div>`;
+const verP=id=>bt('ver',id,'👁','Ver persona','PERSONAS'),verO=id=>bt('ver',id,'👁','Ver objeto','OBJETOS');
+function secVinc(){const id=F.id,ea=F.r.id_enviar_a,L=[];
+ if(id){for(const v of DB.list('VINCULOS')){if(v.id_persona==id)L.push({o:v.id_vinculado,rel:v.vinculo,k:'V',x:v.id_vinculo});else if(v.id_vinculado==id)L.push({o:v.id_persona,rel:vincInv(v.vinculo),k:'V',x:v.id_vinculo,inv:1})}
+  for(const p of DB.list('PERSONAS'))if(p.id_enviar_a==id)L.push({o:p.id_persona,rel:'Le envían la documentación a esta persona',k:'E2',x:p.id_persona})}
+ if(ea&&DB.get('PERSONAS',ea))L.push({o:ea,rel:'Se le envía la documentación',k:'E1',x:ea});
+ L.sort((a,b)=>pNom(a.o).localeCompare(pNom(b.o),'es'));
+ return`<fieldset><legend>Vínculos</legend>${L.map(v=>fila(`${esc(pNom(v.o))} · <span class="muted">${esc(v.rel||'—')}${v.inv?' <span title="Cargado desde la otra persona">↩</span>':''}</span>`,
+  verP(v.o)+`<button class="ib" data-a="delv" data-k2="${v.k}" data-id="${esc(v.x)}" data-n="${esc(pNom(v.o))}" data-r="${esc(v.rel||'')}" title="Quitar">×</button>`)).join('')}
+  ${alta('dl_vinculo','Vínculo (ej.: Referido/a)','addv','Agregar vínculo')}</fieldset>`}
+const perObjs=id=>[...new Set([...DB.list('OBJETO_PERSONA').filter(n=>n.id_persona==id).map(n=>n.id_objeto),...['RODADOS','EDIFICIOS'].flatMap(t=>DB.list(t).filter(x=>x.id_titular_registral==id).map(x=>x.id_objeto))].map(String))];
+function secPerObj(){const id=F.id,rows=id?[...DB.list('OBJETO_PERSONA').filter(n=>n.id_persona==id).map(n=>({o:n.id_objeto,rol:n.rol,fin:n.hasta})),...['RODADOS','EDIFICIOS'].flatMap(t=>DB.list(t).filter(x=>x.id_titular_registral==id).map(x=>({o:x.id_objeto,rol:'Titular registral'})))]:[];
+ return`<fieldset><legend>Objetos</legend>${rows.map(x=>{const o=DB.get('OBJETOS',x.o);return fila(`${esc(objName(o))} <span class="muted">${esc(x.rol||'')} · ${esc(o?.categoria||'')}${x.fin?' · hasta '+fmtD(x.fin):''}</span>`,verO(x.o),x.fin?' fin':'')}).join('')}
+  <div class="add"><button class="btn sec" data-a="addobj" title="Crear un objeto para esta persona">+ Objeto</button></div></fieldset>`}
+function secPer(tp,C){if(tp==='rodado'||tp==='edificio')return`<div class="grid">${inp('s','id_titular_registral',F.s.id_titular_registral)}</div><p class="muted" id="titInfo"></p>`+(tp==='rodado'?'<h3>Conductores</h3>'+secOP(/^conductor$/i,0):'');
+ if(tp==='bien'||tp==='otro'||tp==='caucion')return secOP(/^(?!conductor$)/i,1)+(tp==='caucion'?`<p class="muted">${esc(datosCau())}</p>`:'');
+ return`<p class="muted">${C[2]}</p>`}
+function secOP(re,conRol){const ns=opsDe(F.id).filter(n=>re.test(n.rol||''));
+ return ns.map(n=>fila(`${esc(pNom(n.id_persona))}${conRol?` <span class="muted">${esc(n.rol||'')}</span>`:''}`,verP(n.id_persona)+bt('deln',n.id,'×','Quitar'))).join('')+(conRol?alta('dl_rol','Rol (ej.: Titular)','addt','Agregar persona'):alta('','','addc','Agregar conductor'))}
+function datosCau(){let tom='',ase='';for(const n of opsDe(F.id)){const p=DB.get('PERSONAS',n.id_persona);if(!p)continue;
+  if(/^(tomador|titular)$/i.test(n.rol||'')&&!tom)tom=pNom(p.id_persona)+(p.cuit?` (CUIT ${p.cuit})`:' (sin CUIT cargado)');if(/^(asegurado|beneficiario)$/i.test(n.rol||'')&&!ase)ase=pNom(p.id_persona)}
+ return`Tomador: ${tom||'falta (cargalo arriba con rol Tomador)'}  ·  Asegurado / beneficiario: ${ase||'falta (cargalo arriba con rol Asegurado)'}`}
+function secFic(tp,C){if(F.st)return`<div class="grid">${FORM[F.st].split(',').map(f=>inp('s',f,F.s[f])).join('')}</div>`;
+ if(tp==='personas')return secNomina();if(tp==='flota')return secFlota();return`<p class="muted">${C[3]||''}</p>`}
 function secNomina(){const ns=F.id?nomina(F.id):[];
- return`<fieldset><legend>Personas (nómina)</legend>${ns.map(n=>fila(`${esc(perName(DB.get('PERSONAS',n.id_persona)))} <span class="muted">${esc(n.rol||'')} · desde ${esc(n.desde||'?')}${n.hasta?' hasta '+esc(n.hasta):''}</span>`,
-  bt('ver',n.id_persona,'👁','Ver persona','PERSONAS')+(n.hasta?'':bt('finn',n.id,'⏏','Marcar que salió hoy'))+bt('deln',n.id,'×','Quitar de la nómina'),n.hasta?' fin':'')).join('')}
-  ${alta('dl_rol','Rol (ej.: titular)','addn','Agregar a la nómina')}</fieldset>`}
+ return ns.map(n=>{const p=DB.get('PERSONAS',n.id_persona);return fila(`${esc(pNom(n.id_persona))} <span class="muted">${esc(n.rol||'')} · desde ${fmtD(n.desde)||'?'}${n.hasta?' hasta '+fmtD(n.hasta):''}${p?.dni?' · DNI '+esc(p.dni):''}${p?.fecha_nacimiento?' · '+edad(p.fecha_nacimiento):''}</span>`,
+  verP(n.id_persona)+(n.hasta?'':bt('finn',n.id,'⏏','Marcar que salió hoy'))+bt('deln',n.id,'×','Quitar de la nómina'),n.hasta?' fin':'')}).join('')+alta('dl_rol','Rol (ej.: Asegurado)','addn','Agregar a la nómina')}
+function secFlota(){const rs=F.id?DB.list('RODADOS').filter(x=>x.id_flota==F.id):[],o=[];FLR={};
+ for(const x of DB.list('RODADOS'))if(!x.id_flota&&x.id_objeto!=F.id){let l=objName(DB.get('OBJETOS',x.id_objeto))+(x.patente?' · '+x.patente:'');if(FLR[l])l+=' · '+String(x.id_objeto).slice(-4);FLR[l]=x.id_objeto;o.push(`<option value="${esc(l)}">`)}
+ return(rs.map(x=>fila(`${esc(objName(DB.get('OBJETOS',x.id_objeto)))} <span class="muted">${esc([x.patente,x.marca,x.modelo].filter(Boolean).join(' · '))} · ${fmtD(x.flota_desde)}${x.flota_hasta?' – '+fmtD(x.flota_hasta):''}</span>`,verO(x.id_objeto)+bt('quitrod',x.id_objeto,'⏏','Sacar de la flota'),x.flota_hasta?' fin':'')).join('')||'<p class="muted">Sin autos.</p>')
+  +`<datalist id="dlRodL">${o.join('')}</datalist><div class="add"><input list="dlRodL" id="aR" placeholder="Sumar un rodado"><button class="btn sec" data-a="addrod" title="Sumar el rodado elegido a la flota">Agregar</button><button class="btn sec" data-a="newrod" title="Crear un rodado nuevo dentro de esta flota">Nuevo rodado</button></div>`}
+const ciaN=id=>DB.get('COMPANIAS',id)?.nombre||'';
+const estPol=p=>norm(p.estado_manual)==='anulada'?'Anulada':(p.fin||'')>=hoy()?((p.inicio||'')>hoy()?'Próxima':'Vigente'):'Vencida';
+function relList(objs,per){const O=new Set(objs.map(String)),h=(S,v)=>S.has(String(v)),by=f=>(a,b)=>String(b[f]||'').localeCompare(String(a[f]||'')),
+ P=DB.list('POLIZAS').filter(p=>(per&&p.id_tomador==per)||h(O,p.id_objeto)).sort(by('fin')),PI=new Set(P.map(p=>String(p.id_poliza))),
+ SP=new Set(per?DB.list('SINIESTRO_PARTICIPANTES').filter(x=>x.id_persona==per).map(x=>String(x.id_siniestro)):[]),
+ S=DB.list('SINIESTROS').filter(x=>h(PI,x.id_poliza)||h(O,x.id_objeto)||h(SP,x.id_siniestro)).sort(by('fecha_siniestro')),
+ R=DB.list('RECLAMOS').filter(x=>(per&&(x.id_persona_cliente==per||x.id_persona_contraria==per))||h(O,x.id_objeto_cliente)||h(O,x.id_objeto_contrario)).sort(by('fecha_ingreso')),
+ sec=(g,a,f)=>`<fieldset><legend>${g} (${a.length})</legend>${a.slice(0,30).map(x=>fila(f(x),'')).join('')||'<p class="muted">Ninguno.</p>'}${a.length>30?`<p class="muted">… y ${a.length-30} más.</p>`:''}</fieldset>`;
+ return sec('Pólizas',P,p=>`<b>${esc(p.nro_poliza||'s/n')}</b> · ${esc(ciaN(p.id_compania))} · ${esc(objName(DB.get('OBJETOS',p.id_objeto)))} <span class="muted">${fmtD(p.inicio)} – ${fmtD(p.fin)} · ${estPol(p)}</span>`)
+  +sec('Siniestros',S,x=>`${fmtD(x.fecha_siniestro)} · ${esc(x.siniestro_nro||x.denuncia_nro||'')} · ${esc(objName(DB.get('OBJETOS',x.id_objeto)))} <span class="muted">${esc(x.estado||'')}</span>`)
+  +sec('Reclamos',R,x=>`${fmtD(x.fecha_ingreso)} · ${esc(pNom(x.id_persona_contraria)||x.compania_contraria||'')} · ${esc(x.monto_reclamar||'')} <span class="muted">${si(x.cerrado)?'Cerrado':'Abierto'}</span>`)}
+function secNotas(f){const ns=DB.list('SEGUIMIENTO').filter(n=>n[f]==F.id).sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+ return`<fieldset><legend>Notas (${ns.length})</legend>${ns.slice(0,30).map(n=>fila(`${fmtD(n.fecha)} · ${esc(n.texto||'')}${si(n.hecho)?' <span class="muted">✓ hecho</span>':''}`,'',si(n.hecho)?' fin':'')).join('')||'<p class="muted">Ninguna.</p>'}</fieldset>`}
 function titInfo(){const e=$('#titInfo');if(!e)return;const p=DB.get('PERSONAS',PL[$('#fB [data-k="s:id_titular_registral"]')?.value]);
- e.textContent=p?`Titular: DNI ${p.dni||'—'} · Nac. ${p.fecha_nacimiento||'—'} · Cond. fiscal: ${p.condicion_fiscal||'—'}`:''}
+ e.textContent=p?[p.dni&&'DNI '+p.dni,p.fecha_nacimiento&&'Nac. '+fmtD(p.fecha_nacimiento)+' ('+edad(p.fecha_nacimiento)+')','Cond. fiscal: '+(p.condicion_fiscal||'—')].filter(Boolean).join(' · '):''}
 $('#fB').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;e.preventDefault();const a=b.dataset.a,id=b.dataset.id;
- if(a==='ver'){if(!guardarF())return;$('#dF').close();return abrirF(b.dataset.t,id)}
- if(a==='addv'||a==='addn'){const p=PL[$('#aP').value],v=$('#aV').value.trim();if(!p)return toast('Elegí una persona de la lista');if(!guardarF())return;
-  if(a==='addv'){if(p==F.id)return toast('No se puede vincular consigo misma');DB.save('VINCULOS',{id_persona:F.id,id_vinculado:p,vinculo:v})}
-  else DB.save('OBJETO_PERSONA',{id_objeto:F.id,id_persona:p,rol:v,desde:hoy(),hasta:''});return renderF()}
- if(a==='delv'||a==='deln'){if(await ask(a==='delv'?'¿Quitar este vínculo?':'¿Quitar a esta persona de la nómina?',['Quitar','No']))return;leerF();DB.del(a==='delv'?'VINCULOS':'OBJETO_PERSONA',id);return renderF()}
- if(a==='finn'){if(await ask('¿Marcar que salió hoy?',['Sí','No']))return;leerF();DB.save('OBJETO_PERSONA',{...DB.get('OBJETO_PERSONA',id),hasta:hoy()});renderF()}};
-$('#fB').addEventListener('change',async e=>{const el=e.target,f=el.dataset.k?.split(':')[1];
+ if(a==='wsp'){let t=dig($('#fB [data-k="m:telefono"]')?.value);if(t.length<8)return toast('No hay un teléfono válido.');if(t.length<=8)t='351'+t;if(!t.startsWith('54'))t='549'+t;return window.open('https://wa.me/'+t,'_blank')}
+ if(a==='ver'){if(!await guardarF())return;$('#dF').close();return abrirF(b.dataset.t,id)}
+ if(a==='addobj'){if(await guardarF(true)!==true)return;const p=F.id;$('#dF').close();return abrirF('OBJETOS',null,p)}
+ if(a==='addrod'||a==='newrod'){leerF();if(!F.id&&!F.r.nombre_referencia)return toast('Primero escribí el nombre de referencia de la flota (por ejemplo, el nombre de la empresa).');
+  const rid=a==='addrod'&&FLR[$('#aR').value];if(a==='addrod'&&!rid)return toast('Elegí el rodado que querés sumar a la flota.');if(await guardarF(true)!==true)return;
+  if(rid)DB.save('RODADOS',{...DB.get('RODADOS',rid),id_flota:F.id,flota_desde:hoy(),flota_hasta:''});
+  else{const o=DB.save('OBJETOS',{categoria:catVal('rodado')});DB.save('RODADOS',{id_objeto:o.id_objeto,combustible:'SIN GNC',id_flota:F.id,flota_desde:hoy()});descFor(F.id);$('#dF').close();toast('Rodado nuevo creado dentro de la flota. Completá sus datos (marca, modelo, año, patente…).');return abrirF('OBJETOS',o.id_objeto)}
+  descFor(F.id);return renderF()}
+ if(a==='quitrod'){if(await ask(`¿Sacar ${objName(DB.get('OBJETOS',id))} de esta flota?`,['Sacar','No']))return;leerF();DB.save('RODADOS',{...DB.get('RODADOS',id),id_flota:'',flota_desde:'',flota_hasta:''});descFor(F.id);return renderF()}
+ if(/^add[vntc]$/.test(a)){const p=PL[$('#aP').value],v=$('#aV')?.value.trim()||'';if(!p)return toast('Elegí una persona de la lista');
+  if(a==='addv'&&p==F.id)return toast('No se puede vincular consigo misma');if(await guardarF(true)!==true)return;
+  if(a==='addv')DB.save('VINCULOS',{id_persona:F.id,id_vinculado:p,vinculo:v});
+  else if(a==='addc'){if(opsDe(F.id).some(n=>n.id_persona==p&&/^conductor$/i.test(n.rol||'')))return toast('Esa persona ya está como conductor.');DB.save('OBJETO_PERSONA',{id_objeto:F.id,id_persona:p,rol:'Conductor'})}
+  else DB.save('OBJETO_PERSONA',{id_objeto:F.id,id_persona:p,rol:v,desde:a==='addn'?hoy():'',hasta:''});
+  if(F.t==='OBJETOS')descFor(F.id);relSync();return renderF()}
+ if(a==='delv'){const k=b.dataset.k2;if(await ask(`¿Quitar «${b.dataset.r}» con ${b.dataset.n}?`,['Quitar','No']))return;leerF();
+  if(k==='V')DB.del('VINCULOS',id);else if(k==='E1')F.r.id_enviar_a='';else DB.save('PERSONAS',{...DB.get('PERSONAS',id),id_enviar_a:''});return renderF()}
+ if(a==='deln'){if(await ask('¿Quitar a esta persona?',['Quitar','No']))return;leerF();DB.del('OBJETO_PERSONA',id);descFor(F.id);relSync();return renderF()}
+ if(a==='finn'){if(await ask('¿Marcar que salió hoy?',['Sí','No']))return;leerF();DB.save('OBJETO_PERSONA',{...DB.get('OBJETO_PERSONA',id),hasta:hoy()});descFor(F.id);renderF()}};
+$('#fB').addEventListener('change',async e=>{const el=e.target,f=el.dataset.k?.split(':')[1],k=el.dataset.k?.[0],prev=F.r.categoria,set=(ff,v)=>{const i=$(`#fB [data-k="${k}:${ff}"]`);if(i&&v!=null)i.value=v};
  if(el.matches('[data-per],[data-pick]')&&el.value&&!PL[el.value]){const v=el.value.trim();
-  if(await ask(`«${v}» no está. ¿Creo la persona?`,['Crear','No']))el.value='';else{const n=DB.save('PERSONAS',{apellido:v});perMap();el.value=PLR[n.id_persona]}}
- if(LOC.has(f)){const L=DB.list('LOCALIDADES').find(x=>norm(x.localidad)===norm(el.value)),k=el.dataset.k[0];
-  if(L)for(const[ff,v]of[[f==='localidad'?'cp':'inmueble_cp',L.cp],['provincia',L.provincia]]){const i=$(`#fB [data-k="${k}:${ff}"]`);if(i&&!i.value)i.value=v}}
- if(f==='id_titular_registral')titInfo()});
+  if(await ask(`«${v}» no está. ¿Creo la persona?`,['Crear','No']))el.value='';else{const n=DB.save('PERSONAS',{apellido:nomPropio(v)});perMap();el.value=PLR[n.id_persona]}}
+ if(LOC.has(f)){const L=DB.list('LOCALIDADES').find(x=>norm(x.localidad)===norm(el.value));if(L){set(f==='localidad'?'cp':'inmueble_cp',L.cp);f==='localidad'&&set('provincia',L.provincia)}}
+ if(f==='cp'){const M=DB.list('LOCALIDADES').filter(x=>String(x.cp)===el.value.trim()),li=$(`#fB [data-k="${k}:localidad"]`);if(M.length&&li&&!M.some(x=>norm(x.localidad)===norm(li.value))){li.value=M[0].localidad;set('provincia',M[0].provincia)}}
+ if(f==='id_titular_registral')titInfo();
+ if(f==='id_enviar_a'&&F.t==='PERSONAS'){leerF();renderF();return}
+ if(f==='dni'&&F.t==='PERSONAS'){const d=dig(el.value),o=d.length>5&&DB.list('PERSONAS').find(p=>p.dni==d&&p.id_persona!=F.id);
+  if(o&&!await ask(`Ya existe una persona con ese DNI: ${perName(o)}.\n¿Querés ir a ese registro?`,['Ir','No'])){LS.del(drK(F.t,F.id));$('#dF').close();return abrirF('PERSONAS',o.id_persona)}}
+ if(f==='categoria'){leerF();const tp=TIPO(el.value),nst=TSUB[tp]||'';
+  if(nst!==F.st){if(F.delSub===nst){F.delSub='';F.s={...(DB.get(nst,F.id)||{})}}
+   else{const old=F.st;if(F.id&&old&&DB.get(old,F.id)&&!F.delSub){if(await ask(`Si cambiás la categoría se borran los datos de ${old.toLowerCase()} cargados en este objeto. ¿Seguir?`,['Seguir','No'])){F.r.categoria=prev;return renderF()}F.delSub=old}F.s={}}F.st=nst}
+  if(tp!=='personas'){F.r.actividad='';F.r.uso_moto=''}return renderF()}
+ upVis()});
+$('#fCp').onclick=()=>{leerF();const{t,r,s}=F,v=x=>x==null||String(x).trim()===''?'faltante':String(x).trim(),L=a=>a.map(([k,x])=>k+': '+v(x)).join('\n');let txt;
+ if(t==='PERSONAS')txt=L([['Apellido',r.apellido],['Nombre',r.nombre],['DNI',r.dni],['CUIT',r.cuit],['Condición fiscal',r.condicion_fiscal],['Fecha de nacimiento',fmtD(r.fecha_nacimiento)],['Licencia',r.licencia_tipo],['Vto licencia',fmtD(r.licencia_vto)],['Teléfono',r.telefono],['Email',r.email],['Calle y número',[r.calle,r.numero].filter(Boolean).join(' ')],['Piso / Dto',r.dto],['CP',r.cp],['Localidad',r.localidad],['Provincia',r.provincia]]);
+ else if(F.st==='RODADOS')txt=L([['Patente',s.patente],['Marca',s.marca],['Modelo',s.modelo],['Año',s.anio],['Color',s.color],['Motor',s.motor],['Chasis / Cuadro',s.chasis],['Km',s.km],['Uso',s.uso],['Detalles',r.detalles]]);
+ else{const a=[['Categoría',r.categoria],['Nombre de ref.',r.nombre_referencia]],E=etiqRef(s.tipo_caucion);
+  if(F.st)for(const f of['id_titular_registral',...FORM[F.st].split(',')])if(f!=='id_titular_registral'||F.st==='EDIFICIOS')a.push([/^ref\d$/.test(f)?E[f[3]-1]:lbl(f),BOOL.has(f)?(si(s[f])?'Sí':'No'):isDate(f)?fmtD(s[f]):f==='id_titular_registral'?pNom(s[f]):s[f]]);
+  txt=L(a);const ns=opsDe(F.id);if(ns.length)txt+='\n'+ns.map(n=>`${n.rol||'Persona'}: ${pNom(n.id_persona)}`).join('\n');
+  if(TIPO(r.categoria)==='flota')txt+='\n'+DB.list('RODADOS').filter(x=>x.id_flota==F.id).map(x=>`Auto: ${objName(DB.get('OBJETOS',x.id_objeto))}`).join('\n');txt+='\nDetalles: '+v(r.detalles)}
+ navigator.clipboard.writeText(txt).then(()=>toast('Datos copiados'),()=>toast('No se pudo copiar'))};
 
-/* Borrar: confirmación con «No» por defecto; si se usa en otras tablas, ofrecer reemplazo */
+/* Borrar: confirmación con «No» por defecto; si se usa en otras tablas, ofrecer reemplazo. Persona: «Eliminar con todo lo suyo» (EliminarConCascada) */
 const REFS={PERSONAS:'VINCULOS.id_persona*,VINCULOS.id_vinculado*,OBJETO_PERSONA.id_persona*,POLIZAS.id_tomador,POLIZAS.id_enviar_a,PERSONAS.id_enviar_a,OBJETOS.id_enviar_a,RODADOS.id_titular_registral,EDIFICIOS.id_titular_registral,SINIESTRO_PARTICIPANTES.id_persona,RECLAMOS.id_persona_contraria,RECLAMOS.id_persona_cliente,RECLAMOS.id_conductor,SEGUIMIENTO.id_persona,COTIZACIONES.id_persona',
- OBJETOS:'OBJETO_PERSONA.id_objeto*,POLIZAS.id_objeto,SINIESTROS.id_objeto,SINIESTRO_PARTICIPANTES.id_objeto,RECLAMOS.id_objeto_cliente,RECLAMOS.id_objeto_contrario,SEGUIMIENTO.id_objeto,COTIZACIONES.id_objeto'};
+ OBJETOS:'OBJETO_PERSONA.id_objeto*,POLIZAS.id_objeto,SINIESTROS.id_objeto,SINIESTRO_PARTICIPANTES.id_objeto,RECLAMOS.id_objeto_cliente,RECLAMOS.id_objeto_contrario,SEGUIMIENTO.id_objeto,COTIZACIONES.id_objeto,RODADOS.id_flota'};
 const usos=(t,id)=>REFS[t].split(',').flatMap(x=>{const[tt,f]=x.replace('*','').split('.');return DB.list(tt).filter(r=>r[f]==id&&!(tt===t&&r[pk(t)]==id)).map(r=>({t:tt,f,link:x.endsWith('*'),r}))});
-$('#fDel').onclick=async()=>{const{t,id}=F,P=t==='PERSONAS',nom=P?perName(DB.get(t,id)):objName(DB.get(t,id)),u=usos(t,id);
+function juntarPer(x){const h=(S,v)=>S.has(String(v)),ids=(t,f)=>new Set(DB.list(t).filter(f).map(r=>String(r[pk(t)]))),objs=new Set(),comp=new Set();
+ for(const v of perObjs(x)){const otro=DB.list('OBJETO_PERSONA').some(o=>o.id_objeto==v&&o.id_persona!=x)||['RODADOS','EDIFICIOS'].some(t=>{const r=DB.get(t,v);return r?.id_titular_registral&&r.id_titular_registral!=x})||DB.list('POLIZAS').some(p=>p.id_objeto==v&&p.id_tomador&&p.id_tomador!=x);(otro?comp:objs).add(v)}
+ const pols=ids('POLIZAS',p=>p.id_tomador==x||h(objs,p.id_objeto)),sins=ids('SINIESTROS',s=>h(pols,s.id_poliza)||h(objs,s.id_objeto)),recs=ids('RECLAMOS',r=>r.id_persona_cliente==x||h(objs,r.id_objeto_cliente)||h(sins,r.id_siniestro));
+ return{pers:new Set([String(x)]),objs,comp,pols,sins,recs}}
+function cascada({pers,objs,pols,sins,recs}){const h=(S,v)=>S.has(String(v)),nul=(t,f,S,w=()=>true)=>DB.list(t).filter(r=>h(S,r[f])&&w(r)).forEach(r=>DB.save(t,{...r,[f]:''})),del=(t,w)=>DB.list(t).filter(w).forEach(r=>DB.del(t,r[pk(t)]));
+ nul('RECLAMOS','id_siniestro',sins,r=>!h(recs,r.id_reclamo));for(const f of['id_objeto_contrario','id_objeto_cliente'])nul('RECLAMOS',f,objs);for(const f of['id_persona_contraria','id_persona_cliente'])nul('RECLAMOS',f,pers);
+ nul('SINIESTRO_PARTICIPANTES','id_objeto',objs);nul('POLIZAS','id_poliza_anterior',pols);nul('POLIZAS','id_tomador',pers);nul('POLIZAS','id_enviar_a',pers);nul('OBJETOS','id_enviar_a',pers);nul('PERSONAS','id_enviar_a',pers);
+ nul('RODADOS','id_titular_registral',pers);nul('RODADOS','id_flota',objs);nul('EDIFICIOS','id_titular_registral',pers);nul('COTIZACIONES','id_objeto',objs);
+ const cots=new Set(DB.list('COTIZACIONES').filter(c=>h(pers,c.id_persona)).map(c=>String(c.id_cotizacion))),cons=new Set(DB.list('COT_CONCEPTOS').filter(c=>h(cots,c.id_cotizacion)).map(c=>String(c.id_concepto)));
+ del('SEGUIMIENTO',s=>h(pers,s.id_persona)||h(pols,s.id_poliza)||h(sins,s.id_siniestro)||h(recs,s.id_reclamo));del('RECLAMOS',r=>h(recs,r.id_reclamo));del('SINIESTRO_PARTICIPANTES',s=>h(sins,s.id_siniestro)||h(pers,s.id_persona));del('SINIESTROS',s=>h(sins,s.id_siniestro));
+ del('ENDOSOS',e=>h(pols,e.id_poliza));del('COMISIONES',c=>h(pols,c.id_poliza));del('POLIZAS',p=>h(pols,p.id_poliza));
+ del('COT_CONC_VALOR',c=>h(cons,c.id_concepto));del('COT_CONCEPTOS',c=>h(cots,c.id_cotizacion));del('COT_ALTERNATIVAS',c=>h(cots,c.id_cotizacion));del('COTIZACIONES',c=>h(cots,c.id_cotizacion));
+ del('OBJETO_PERSONA',o=>h(objs,o.id_objeto)||h(pers,o.id_persona));for(const t of SUBS)del(t,r=>h(objs,r.id_objeto));del('OBJETOS',o=>h(objs,o.id_objeto));
+ del('VINCULOS',v=>h(pers,v.id_persona)||h(pers,v.id_vinculado));del('PERSONAS',p=>h(pers,p.id_persona))}
+$('#fDel').onclick=async()=>{const{t,id}=F,P=t==='PERSONAS',nom=P?perName(DB.get(t,id)):objName(DB.get(t,id)),u=usos(t,id);let hecho=false;
  if(!u.length){if(await ask(`¿Borrar «${nom}»? No se puede deshacer.`,['Borrar','No']))return}
- else{const op=['Reemplazar por otro…',...(u.some(x=>!x.link)?[]:['Borrar igual (quita esos vínculos)']),'No'],
+ else{const op=['Reemplazar por otro…',P?'Eliminar con todo lo suyo…':u.some(x=>!x.link)?null:'Borrar igual (quita esos vínculos)','No'].filter(Boolean),
    i=await ask(`«${nom}» se usa en ${u.length} lugar(es): ${[...new Set(u.map(x=>x.t.toLowerCase().replace(/_/g,' ')))].join(', ')}. ¿Qué hago?`,op);
   if(i===op.length-1)return;
   if(i===0){P?perMap():objMap();const v=await pick(P?'¿Por qué persona la reemplazo?':'¿Por qué objeto lo reemplazo?',P?'dlPer':'dlObj'),n=(P?PL:OL)[v];
    if(!n||n==id)return v!=null&&toast('Elegí uno de la lista');for(const x of u)DB.save(x.t,{...x.r,[x.f]:n})}
+  else if(P){const J=juntarPer(id),c=(S,a,b)=>S.size?`\n· ${S.size} ${S.size>1?b:a}`:'';
+   if(await ask(`Se elimina «${nom}» y lo que depende solo de esta persona:${c(J.objs,'objeto','objetos')}${c(J.pols,'póliza (con endosos)','pólizas (con endosos)')}${c(J.sins,'siniestro','siniestros')}${c(J.recs,'reclamo','reclamos')}\n· vínculos, nómina y notas${J.comp.size?`\nQuedan ${J.comp.size} objeto(s) compartidos con otras personas.`:''}\n¿Eliminar todo esto? No se puede deshacer.`,['Eliminar todo','No']))return;
+   cascada(J);hecho=true}
   else for(const x of u)DB.del(x.t,x.r[pk(x.t)])}
- if(!P)for(const s of SUBS)DB.get(s,id)&&DB.del(s,id);
- DB.del(t,id);LS.del(drK(t,id));$('#dF').close();F=null;renderLista();toast('Borrado')};
+ if(!hecho){if(!P)for(const s of SUBS)DB.get(s,id)&&DB.del(s,id);DB.del(t,id)}
+ LS.del(drK(t,id));$('#dF').close();F=null;relSync();renderLista();toast('Borrado')};
 
 /* ---- Ajustes ---- */
 const dCfg=$('#dCfg');
