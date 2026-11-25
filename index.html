@@ -78,6 +78,7 @@ dialog h3{font:600 1rem Georgia,serif;color:var(--verde);margin:1rem 0 .2rem}
 </main>
 <dialog id="dCfg"><div class="top"><h2>Ajustes</h2><button class="ib" id="bCfgX" title="Cerrar">✕</button></div>
  <button class="btn hide" id="bSyncNow" title="Subir los cambios pendientes y bajar lo último de la hoja">Sincronizar ahora</button>
+ <button class="btn sec" id="bImp" title="Cargar los CSV exportados del Access (reemplaza esas pestañas)">Importar del Access</button><input type="file" id="fImp" accept=".csv,text/csv" multiple hidden>
  <button class="btn sec" id="bHoja2" title="Crear otra hoja o elegir una existente">Cambiar hoja</button>
  <button class="btn sec" id="bUpd" title="Borra la caché y recarga, sin tocar tus datos">Actualizar app</button>
  <button class="btn sec" id="bSalir" title="Cerrar sesión en este dispositivo">Cerrar sesión</button>
@@ -104,7 +105,7 @@ dialog h3{font:600 1rem Georgia,serif;color:var(--verde);margin:1rem 0 .2rem}
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const APP_VERSION='5', SCHEMA=1,
+const APP_VERSION='6', SCHEMA=1,
  CLIENT_ID='562982844201-hitbnj8r42hi7es2fvlthl07ukrbg5pc.apps.googleusercontent.com',
  API_KEY='AIzaSyDF84n7vqE1BTyi4cTsaK8gsfHDIqGAcwE', APP_ID='562982844201',
  DRIVE='https://www.googleapis.com/auth/drive.file', SCOPE='openid email profile '+DRIVE,
@@ -323,6 +324,51 @@ async function push(){
  if(req.length)await api(`${SH}/${sid}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:req})});
  if(vals.length)await api(`${SH}/${sid}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:vals})});
  for(const[k,v]of snap)if(D.q[k]?.n===v.n)delete D.q[k];persist()}
+/* ==== Paso 4b: importar CSV del Access (un archivo por tabla, nombre = pestaña). Reemplaza esas pestañas. ==== */
+function parseCSV(s){s=s.replace(/^﻿/,'');const l0=s.slice(0,s.indexOf('\n')>>>0),d=l0.split(';').length>l0.split(',').length?';':',';
+ const R=[];let r=[],f='',q=false;
+ for(let i=0;i<s.length;i++){const c=s[i];
+  if(q){if(c==='"'){if(s[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c==='"')q=true;else if(c===d){r.push(f);f=''}
+  else if(c==='\n'){r.push(f.replace(/\r$/,''));R.push(r);r=[];f=''}else f+=c}
+ if(f||r.length){r.push(f.replace(/\r$/,''));R.push(r)}
+ return R.filter(x=>x.some(v=>v!==''))}
+const BOOLX=new Set([...BOOL,...'favorita,codigo_abierto,adherida_cleas,limitrofes,incluido,visible,activo,mostrar,recomendada,rechazado,no_acepto'.split(',')]);
+const isDateX=f=>isDate(f)||/^(fecha|inicio|fin|desde|hasta|cubre_desde|cubre_hasta|vto_cuota|valida_hasta|flota_desde|flota_hasta)$/.test(f);
+const p2=n=>String(n).padStart(2,'0');
+function nFecha(v){v=String(v).trim();let m=v.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);if(m)return`${m[1]}/${p2(m[2])}/${p2(m[3])}`;
+ m=v.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);if(m){const y=m[3].length===2?'20'+m[3]:m[3];return`${y}/${p2(m[2])}/${p2(m[1])}`}return v}
+function nRow(h,f){const r={};h.forEach((c,j)=>{let v=(f[j]??'').trim();
+ if(BOOLX.has(c))v=si(v)?'TRUE':'FALSE';else if(v&&isDateX(c))v=nFecha(v);r[c]=v});return r}
+$('#bImp').onclick=()=>{if(!navigator.onLine)return toast('Necesitás conexión para importar');$('#fImp').value='';$('#fImp').click()};
+$('#fImp').onchange=async e=>{const fs=[...e.target.files];if(!fs.length)return;
+ const imp={},raros=[];let cfg=null;
+ for(const f of fs){const t=f.name.replace(/\.csv$/i,'').trim().toUpperCase(),v=parseCSV(await f.text());if(!v.length)continue;
+  const h=v[0].map(c=>c.trim());
+  if(t==='CONFIG'){cfg=v.slice(1).map(x=>nRow(h,x));continue}
+  if(!T[t]){raros.push(f.name);continue}
+  const k=pk(t);if(!h.includes(k)){raros.push(f.name+' (sin '+k+')');continue}
+  let rows=v.slice(1).map(x=>nRow(h,x)).filter(r=>r[k]!=='');
+  if(h.includes('fecha_creacion'))rows=rows.map((r,i)=>[r,i]).sort((a,b)=>String(b[0].fecha_creacion).localeCompare(String(a[0].fecha_creacion))||a[1]-b[1]).map(x=>x[0]);
+  const H=cols(t).concat(h.filter(c=>!cols(t).includes(c)));imp[t]={H,rows}}
+ const ts=Object.keys(imp);if(!ts.length&&!cfg)return toast('No encontré tablas válidas'+(raros.length?': '+raros.join(', '):''));
+ const pend=ts.filter(t=>Object.keys(D.q).some(k=>k.startsWith(t+'|'))).length;
+ const res=ts.map(t=>`${t} (${imp[t].rows.length})`).concat(cfg?['textos de CONFIG']:[]).join(', ');
+ if(await ask(`Se van a reemplazar en la hoja: ${res}.`+(ts.some(t=>DB.list(t).length)?' Lo que haya ahora en esas pestañas se borra.':'')+(pend?' Hay cambios sin subir en esas pestañas: se pierden.':'')+(raros.length?` Ignoro: ${raros.join(', ')}.`:''),['Importar','Cancelar']))return;
+ dCfg.close();syncing=true;paint();
+ try{toast('Importando…');const M=await meta(),req=[];
+  for(const t of ts){const{H,rows}=imp[t],gp=M[t].gridProperties;
+   req.push({updateSheetProperties:{properties:{sheetId:M[t].sheetId,gridProperties:{rowCount:rows.length+100,columnCount:Math.max(gp.columnCount,H.length)}},fields:'gridProperties(rowCount,columnCount)'}})}
+  if(req.length)await api(`${SH}/${sid}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:req})});
+  if(ts.length)await api(`${SH}/${sid}/values:batchClear`,{method:'POST',body:JSON.stringify({ranges:ts.map(t=>`'${t}'`)})});
+  let n=0;for(const t of ts){const{H,rows}=imp[t],V=[H].concat(rows.map(r=>H.map(c=>r[c]??'')));
+   for(let i=0;i<V.length;i+=2000){await api(`${SH}/${sid}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:[{range:`'${t}'!A${i+1}`,values:V.slice(i,i+2000)}]})});
+    toast(`Importando ${t}… ${Math.min(i+2000,V.length)-1}/${rows.length}`)}
+   D.tabs[t]=rows;D.heads[t]=H;for(const k of Object.keys(D.q))if(k.startsWith(t+'|'))delete D.q[k];n+=rows.length}
+  if(cfg){D.cfg??=cfgDef();const w=D.cfg.whatsapp??={};for(const r of cfg)if(r.clave)w[r.clave]=r.valor??'';D.qc=++D.seq}
+  ixv++;persist();toast(`Listo: ${n} filas importadas`+(cfg?' y los textos de CONFIG':''))}
+ catch(e){toast(errMsg(e))}
+ syncing=false;paint();sync(true)};
 const putCfg=c=>api(`${SH}/${sid}/values/${encodeURIComponent("'_cfg'!A1")}?valueInputOption=RAW`,{method:'PUT',body:JSON.stringify({values:[[JSON.stringify(c)]]})});
 async function pull(){
  const tabs=Object.keys(T),g=await api(`${SH}/${sid}/values:batchGet?`+rng(tabs.map(t=>`'${t}'`).concat("'_cfg'!A1")));
