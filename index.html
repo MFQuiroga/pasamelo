@@ -122,6 +122,13 @@ input[list]::-webkit-calendar-picker-indicator{display:block!important;opacity:.
 .tba{top:45%;width:30px;height:30px;border-radius:50%;border:0;background:var(--dorado);color:#fff;font-size:1rem;cursor:pointer;z-index:20}
 dialog.fw.tbh{display:none!important}body.tb dialog.fw:not(:modal){resize:none;box-shadow:0 2px 10px #0002}body.tb dialog.fw .wmin,body.tb dialog.fw .wmax{display:none!important}body.tb dialog.fw:not(:modal) .wbar{cursor:default}
 body.tb dialog.fw .fld>span{flex-basis:6.6rem}body.tb dialog.fw .chk,body.tb dialog.fw p.muted.fld{padding-left:7.1rem}
+#b2S{position:fixed;left:0;right:0;z-index:2147480000;background:var(--marfil);display:flex;gap:.25rem;align-items:center;padding:0 .4rem;border-bottom:1px solid var(--borde)}#b2S .tbt{padding:.25rem .5rem;font-size:.8rem;white-space:nowrap}#b2S .tbt.on{background:var(--verde);color:var(--marfil);border-color:var(--verde)}
+.b2w{position:relative}.b2w .tbp{position:absolute;top:calc(100% + 4px);left:0;z-index:5}
+.b2c{background:var(--papel);border:1px solid var(--borde);border-radius:10px;overflow:auto;padding:.4rem .6rem;font-size:.88rem;box-shadow:0 2px 10px #0002}.b2c h4{margin:.6rem 0 .2rem;color:var(--verde)}
+.b2h{display:flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--borde);padding-bottom:.3rem;margin-bottom:.3rem;position:sticky;top:-.4rem;background:var(--papel)}.b2h b{font:600 1.05rem Georgia,serif;color:var(--verde)}.b2h .sp{flex:1}
+.b2f{display:flex;gap:.5rem;padding:.2rem 0;border-bottom:1px solid #e3ddcc80}.b2f span{flex:0 0 6.6rem;color:var(--gris)}.b2f b{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.b2c .add{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem}.b2c textarea{width:100%;margin-top:.5rem;box-sizing:border-box}.b2i{padding:.35rem .2rem;border-bottom:1px solid var(--borde);cursor:pointer}.b2i:hover{background:#1f4d3a0a}
+.tbni.hl2{background:#b8954a2e}.b2pen tr[data-pi],.b2pen tr.b2v{cursor:pointer}.b2pen tr.b2v td{font-weight:600;color:#b5473a}.b2pen tr.b2hoy td{font-weight:600;color:var(--verde);background:#1f4d3a0d}#secB2 div{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem}
 </style></head><body>
 <header><h1>PASamelo</h1><button class="btn sec mini2 hide" id="bIni" title="Ir al tablero de Inicio">⌂ Inicio</button><button class="btn sec mini2 hide" id="bForm" title="Volver a los formularios abiertos"></button><button class="btn sec mini2 hide" id="bCerT" title="Guardar y cerrar todos los formularios">Cerrar todo</button><small id="who"></small><button class="ib hide" id="bSync" style="font-size:.95rem" title="Cambios sin subir: tocá para subirlos"></button><button class="ib" id="bCfg" title="Ajustes">⚙️</button></header>
 <nav id="nav" class="hide"><button data-t="INICIO" title="Inicio">Inicio</button><button data-t="PERSONAS" title="Personas">Personas</button><button data-t="OBJETOS" title="Objetos asegurables">Objetos</button><button data-t="POLIZAS" title="Pólizas">Pólizas</button><button data-t="SINIESTROS" title="Siniestros">Siniestros</button><button data-t="RECLAMOS" title="Reclamos">Reclamos</button><button data-t="SEGUIMIENTO" title="Notas y recordatorios">Notas</button><button data-t="COTIZACIONES" title="Cotizaciones">Cotizaciones</button></nav>
@@ -199,7 +206,7 @@ body.tb dialog.fw .fld>span{flex-basis:6.6rem}body.tb dialog.fw .chk,body.tb dia
 <div id="toast"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const APP_VERSION='12', SCHEMA=1,
+const APP_VERSION='13', SCHEMA=1,
  CLIENT_ID='562982844201-hitbnj8r42hi7es2fvlthl07ukrbg5pc.apps.googleusercontent.com',
  API_KEY='AIzaSyDF84n7vqE1BTyi4cTsaK8gsfHDIqGAcwE', APP_ID='562982844201',
  DRIVE='https://www.googleapis.com/auth/drive.file', SCOPE='openid email profile '+DRIVE,
@@ -274,7 +281,7 @@ function wPos(w){const el=w.el,p=(LS.get('pas_win')||{})[w.k],[c,n]=WCOL[w.k],a=
  else Object.assign(el.style,{left:Math.round(c*a+3)+'px',top:'4px',width:Math.round(n*a-6)+'px',height:'calc(100vh - 42px)'});w.pw=el.offsetWidth;w.ph=el.offsetHeight}
 async function wAbrir(k){const w=useW(k);if(w.el.open&&getS(w.e)){const ok=await(w.e==='F'?guardarF():w.e==='P'?guardarP():guardarG());if(!ok&&!(w.e==='G'&&G?.tirar))return false}return true}
 function wShow(k){const w=useW(k),el=w.el,otro=[...document.querySelectorAll('dialog[open]')].some(d=>d!==el&&d.matches(':modal'));el.classList.remove('min');
- if(!DESK()||otro||!TBK.includes(k)){if(el.open)el.close();el.showModal()}else{if(el.open&&el.matches(':modal'))el.close();if(!el.open){el.show();wPos(w)}TB.ini=false;TB.last=k;TB.pop=null;const ab=tbAb(),i=ab.indexOf(k);if(i<TB.off)TB.off=i;if(i>=TB.off+TB.n)TB.off=i-TB.n+1}
+ if(!DESK()||otro||!(TBK.includes(k)||B2.on&&k==='cot')){if(el.open)el.close();el.showModal()}else{if(el.open&&el.matches(':modal'))el.close();if(!el.open){el.show();wPos(w)}TB.ini=false;TB.last=k;TB.pop=null;const ab=tbAb(),i=ab.indexOf(k);if(i<TB.off)TB.off=i;if(i>=TB.off+TB.n)TB.off=i-TB.n+1}
  el.querySelector('.wk').textContent=WNOM[k];wFront(w)}
 function wDrop(k){const w=W[k];if(!w)return;if(w.el.open)w.el.close();w.st=null;if(CUR[w.e]===w)setS(w.e,null)}
 function wTask(){tbLay();const t=$('#wTask'),ws=Object.values(W).filter(w=>w.el.open&&!w.el.matches(':modal'));document.body.classList.toggle('wo',ws.length>0);t.classList.toggle('hide',!ws.length);if(!ws.length)return;
@@ -1740,10 +1747,10 @@ const cpSil=t=>{t&&navigator.clipboard?.writeText(t).then(()=>toast('Copiado: '+
 /* ==== v12: tableroB — los 5 formularios en 4 espacios fijos, en orden Personas · Objetos · Pólizas · Siniestros · Reclamos.
  Los cerrados quedan como pestañas en su lugar del orden (con sus relacionados); si hay más abiertos que espacios, flechas.
  Abajo de cada formulario, sus notas. ⌂ Inicio vuelve al tablero de Inicio sin cerrar nada. Notas y cotizaciones se abren encima. ==== */
-var TB={off:0,ini:false,pop:null,n:4,last:''},TBK=['per','obj','pol','sin','rec'];
-const tbAb=()=>TBK.filter(k=>W[k]?.el.open&&!W[k].el.matches(':modal'));
+var TB={off:0,ini:false,pop:null,n:4,last:''},TBK=['per','obj','pol','sin','rec'],B2={on:localStorage.getItem('pas_b2')==='1',P:{},ctx:'',off:0,ls:'',hl:'',vo:false};
+const tbAb=()=>(B2.on?TBK.concat('cot'):TBK).filter(k=>W[k]?.el.open&&!W[k].el.matches(':modal'));
 function tbId(k){const w=W[k];if(!w)return null;const s=CUR[w.e]===w?getS(w.e):w.st;return s?.id||null}
-function tbLay(){const c=document.getElementById('tbB');if(!c)return;const ab=tbAb(),on=ab.length>0&&DESK()&&!TB.ini;document.body.classList.toggle('tb',on);
+function tbLay(){if(B2.on)return b2Lay();const c=document.getElementById('tbB');if(!c)return;const ab=tbAb(),on=ab.length>0&&DESK()&&!TB.ini;document.body.classList.toggle('tb',on);
  const bF=$('#bForm');bF.classList.toggle('hide',!(ab.length&&TB.ini&&DESK()));bF.textContent=`Formularios (${ab.length}) ›`;$('#bCerT').classList.toggle('hide',!on);if(on)$('#bIni').classList.remove('hide');
  for(const k of TBK)W[k]&&W[k].el.classList.toggle('tbh',!on&&!!ab.length&&DESK()&&TB.ini);
  if(!on){c.classList.add('hide');c.innerHTML='';return}c.classList.remove('hide');
@@ -1759,7 +1766,7 @@ function tbLay(){const c=document.getElementById('tbB');if(!c)return;const ab=tb
  for(const k of ab)vis.includes(k)||W[k].el.classList.add('tbh');c.innerHTML=h}
 function tbNotas(k,x,cw,H,NH,GAP){const id=tbId(k),a=id?notasDe(NF[k],id).sort((p,q)=>sy(p.hecho)-sy(q.hecho)||String(q.fecha||'').localeCompare(String(p.fecha||''))):[];
  return`<div class="tbn" style="left:${x}px;top:${H-NH-GAP}px;width:${cw}px;height:${NH}px"><div class="tbnh"><b>Notas</b><span class="muted">${a.length||''}</span><span class="sp"></span>${id?`<button class="lnk" data-nn="${k}" title="Nota nueva para este registro">+ Nota</button>`:''}</div>`
-  +(a.map(n=>`<div class="tbni${sy(n.hecho)?' fin':''}" data-nota="${esc(n.id_seguimiento)}" title="${esc(notaA(n)+' · '+(n.texto||''))}"><span>${esc(segEst(n))}</span> ${esc(String(n.texto||'').slice(0,160))}</div>`).join('')||`<p class="muted">${id?'Sin notas.':'Guardá el registro para agregarle notas.'}</p>`)+'</div>'}
+  +(a.map(n=>`<div class="tbni${sy(n.hecho)?' fin':''}${n.id_seguimiento==B2.hl?' hl2':''}" data-nota="${esc(n.id_seguimiento)}" title="${esc(notaA(n)+' · '+(n.texto||''))}"><span>${esc(segEst(n))}</span> ${esc(String(n.texto||'').slice(0,160))}</div>`).join('')||`<p class="muted">${id?'Sin notas.':'Guardá el registro para agregarle notas.'}</p>`)+'</div>'}
 function tbPop(k,R){const a=R?[...R[k]]:[];return`<div class="tbp">${a.length?a.slice(0,80).map(([id,rol])=>`<button data-ab="${k}" data-id="${esc(id)}">${esc(k==='per'?perLin(DB.get('PERSONAS',id)):iniDesc(k,id))}${rol?` <small>· ${esc(rol)}</small>`:''}</button>`).join(''):'<p class="muted">No hay relacionados.</p>'}<button class="nv" data-nv="${k}">+ Agregar ${WNOM[k].toLowerCase()}</button></div>`}
 /* Si abro una póliza, siniestro o reclamo con una persona abierta, el objeto se abre solo en su espacio */
 async function tbAuto(k,id){if(!DESK()||!id||!['pol','sin','rec'].includes(k)||!W.per?.el.open||W.obj?.el.open)return;const r=DB.get(KT[k],id);if(!r)return;
@@ -1771,11 +1778,11 @@ document.getElementById('tbB').addEventListener('click',e=>{const b=e.target.clo
  if(d.ab){TB.pop=null;return abrirK(d.ab,d.id)}if(d.nv){TB.pop=null;return abrirK(d.nv,null,d.nv==='pol'&&tbId('per')?{id_tomador:tbId('per'),...(tbId('obj')?{id_objeto:tbId('obj')}:{})}:undefined)}
  if(d.nota)return abrirK('nota',d.nota);
  if(d.nn){const pre={[NF[d.nn]]:tbId(d.nn)};segCompletar(pre);return abrirG('SEGUIMIENTO',null,pre)}});
-document.addEventListener('pointerdown',e=>{if(TB.pop&&!e.target.closest('.tbg')){TB.pop=null;tbLay()}},true);
+document.addEventListener('pointerdown',e=>{if(TB.pop&&!e.target.closest('.tbg,.b2s')){TB.pop=null;tbLay()}},true);
 addEventListener('resize',()=>{clearTimeout(TB.rt);TB.rt=setTimeout(tbLay,120)});
 $('#bIni').onclick=()=>{TB.ini=true;TB.pop=null;tbLay();show('vInicio');renderIni()};
 $('#bForm').onclick=()=>{TB.ini=false;tbLay()};
-$('#bCerT').onclick=async()=>{await wTodas(true);wTask()};
+$('#bCerT').onclick=async()=>{B2.P={};await wTodas(true);wTask()};
 
 /* Exportar (T5Exportar): Excel con todas las columnas de lo que muestra cada lista */
 const EXH={per:['Nombre','Apodo / rol','Situación','DNI','CUIT','Condición fiscal','Nacimiento','Teléfono','Email','Calle','Número','Dto','Barrio','Localidad','CP','Provincia','Actividad','Estado civil','Licencia','Vto. licencia','Historial'],
@@ -1833,8 +1840,9 @@ function hoyListas(){const h=hoy(),P=DB.list('POLIZAS'),sig=new Set(P.map(p=>Str
   .map(({p,f})=>{const ok=+p.ultimo_saludo_anio===+f.slice(0,4);return{id:p.id_persona,k:'per',ok,f,c:[diaL(f),nomPer(p),+f.slice(0,4)-+p.fecha_nacimiento.slice(0,4),p.telefono||'',si(p.tutear)?'Informal':'Formal',ok?'✓ Saludado':'✈ Saludar']}}).sort((a,b)=>a.ok-b.ok||a.f.localeCompare(b.f)||a.c[1].localeCompare(b.c[1],'es'));
  return{ren,ref,env,not,cum}}
 const HAY={ren:`Vencen en los próximos días o vencieron sin renovar.`,ref:'Refacturan pronto, o ya refacturaron y falta cargar el endoso nuevo.',env:'Pólizas activas sin fecha de envío, o con endosos sin enviar.',not:'Vencidas, de hoy y de los próximos días.',cum:'De hoy, de los próximos días y de los últimos 5.'};
-function renderHoy(){const L=hoyListas(),t=IS.tab,a=L[t],sel=IS.hs[t];HL=L;
+function renderHoy(){const L=hoyListas(),t=IS.tab,a=L[t],sel=IS.hs[t];HL=L;if(B2.on)L.pen=b2PenL(L);
  $('#hTabs').innerHTML=Object.keys(HT).map(k=>`<button class="${k===t?'on':''}" data-t="${k}" title="${HAY[k]}">${HT[k]} <b>${k==='cum'?L.cum.filter(x=>!x.ok).length:L[k].length}</b></button>`).join('');
+ if(t==='pen')return b2PenR(L);
  const H={ren:['Vence','Situación','Tomador','Compañía','Póliza','Objeto'],ref:['Refactura','Días','Tomador','Objeto','Compañía','Póliza','Endoso'],env:['Desde','Falta enviar','Tomador','Compañía','Póliza','Objeto'],not:['Aviso','Persona','Asociada a','Nota'],cum:['Día','Nombre','Cumple','Teléfono','Trato','Saludo']}[t];
  $('#hAyu').textContent=(a.length?'':'No hay nada pendiente. · ')+(t==='not'&&IS.m.size?'Las notas de lo marcado, la más reciente primero.':HAY[t])+' · Doble clic: abrir.';
  $('#hL').innerHTML=`<table class="tb hl"><tr>${H.map(x=>`<th>${x}</th>`).join('')}</tr>${a.slice(0,300).map(x=>`<tr data-id="${esc(x.id)}" class="${x.id==sel?'on':''}${x.fin||x.ok?' fin':''}">${x.c.map((c,i)=>`<td${t==='cum'&&i===5?' class="nw"':''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
@@ -1846,10 +1854,10 @@ function renderHoy(){const L=hoyListas(),t=IS.tab,a=L[t],sel=IS.hs[t];HL=L;
 let HL={};
 function msjCumple(p){const nom=lindo(String(p.nombre||'').trim().split(/\s+/)[0]);let apo=String(p.apodo||'').trim()||nom||lindo(nomPer(p));return String(cfgV(si(p.tutear)?'mensaje_informal':'mensaje_formal','¡Feliz cumpleaños, {nombre}!')).replaceAll('{nombre}',nom||apo).replaceAll('{apodo}',apo).replaceAll('{PAS}',cfgV('nombre_pas'))}
 $('#hTabs').onclick=e=>{const b=e.target.closest('button');if(b){IS.tab=b.dataset.t;renderHoy()}};
-$('#hL').onclick=e=>{const r=e.target.closest('tr[data-id]');if(!r)return;const t=IS.tab,x=HL[t].find(y=>y.id==r.dataset.id);IS.hs[t]=x.id;
+$('#hL').onclick=e=>{if(IS.tab==='pen')return b2PenClick(e);const r=e.target.closest('tr[data-id]');if(!r)return;const t=IS.tab,x=HL[t].find(y=>y.id==r.dataset.id);IS.hs[t]=x.id;
  if(t==='cum'&&e.target.closest('td')?.cellIndex===5){if(x.ok)return cumRev(x.id);return cumWa(x.id)}
  if(t==='ren'||t==='ref'||t==='env'){IS.m.delete('pol');IS.m.set('pol',String(x.id));return renderIni()}renderHoy()};
-$('#hL').ondblclick=e=>{const r=e.target.closest('tr[data-id]');if(!r)return;const t=IS.tab;t==='cum'?cumFicha(r.dataset.id):abrirK(t==='not'?'nota':'pol',r.dataset.id)};
+$('#hL').ondblclick=e=>{if(IS.tab==='pen')return;const r=e.target.closest('tr[data-id]');if(!r)return;const t=IS.tab;t==='cum'?cumFicha(r.dataset.id):abrirK(t==='not'?'nota':'pol',r.dataset.id)};
 $('#hB').onclick=async e=>{const b=e.target.closest('[data-h]');if(!b)return;const t=IS.tab,id=IS.hs[t],a=b.dataset.h;
  if(a==='nnota'){const m=[...IS.m.keys()].at(-1),v=m&&IS.m.get(m),pre={};if(m==='per')pre.id_persona=v;if(m==='obj')pre.id_objeto=v;if(m==='pol')pre.id_poliza=v;if(m==='sin')pre.id_siniestro=v;if(m==='rec')pre.id_reclamo=v;segCompletar(pre);return abrirG('SEGUIMIENTO',null,pre)}
  if(!id||!HL[t].some(x=>x.id==id))return toast('Primero elegí una fila de la lista.');
@@ -2311,6 +2319,112 @@ const dCfg=$('#dCfg');
 $('#bCfg').onclick=()=>{$('#bHoja2').classList.toggle('hide',!user);$('#bSalir').classList.toggle('hide',!user);cfgUI();dCfg.showModal()};
 $('#bCfgX').onclick=()=>dCfg.close();
 $('#bHer').onclick=()=>{dCfg.close();herAbrir()};$('#bMsj').onclick=()=>{dCfg.close();herCfg()};
+/* ---- v13: modo B2 (prueba) — Pendientes juntos, botones en 2 filas, columnas en orden fijo de 13 ---- */
+const B2N={ven:'Vendedores',cia:'Compañías',cob:'Coberturas',cum:'Cumpleaños',per:'Persona',obj:'Objeto',cot:'Cotización',ren:'Renovación',polv:'Pólizas vigentes',pol:'Póliza',end:'Endoso',ref:'Refacturación',sin:'Siniestro',rec:'Reclamo'},B2W=['per','obj','cot','pol','sin','rec'],B2I={cum:'🎂',ren:'🔄',ref:'🧾',env:'✉',not:'📝'};
+function b2Ord(){const o=['ven','cia','cob','cum','per','obj','cot','ren','polv','pol','end','ref','sin','rec'];if(B2.ctx==='ren'){o.splice(o.indexOf('cob'),1);o.splice(o.indexOf('pol')+1,0,'cob')}return o}
+function b2Ab(){const ab=tbAb();return b2Ord().filter(k=>B2W.includes(k)?ab.includes(k):!!B2.P[k])}
+const b2Es=id=>DB.list('ENDOSOS').filter(e=>e.id_poliza==id).sort((a,b)=>a.nro_endoso-b.nro_endoso);
+function b2E(){const s=B2.P.end;if(!s)return null;const es=b2Es(s.id);return es[Math.max(0,es.findIndex(e=>e.id_endoso==s.e))]||null}
+function b2Strip(){let s=document.getElementById('b2S');if(!s){s=document.createElement('div');s.id='b2S';s.className='b2s hide';document.body.append(s);s.addEventListener('click',b2Click)}return s}
+function b2Lay(){const c=document.getElementById('tbB'),S=b2Strip(),ab=b2Ab(),wab=tbAb(),on=ab.length>0&&DESK()&&!TB.ini;document.body.classList.toggle('tb',on);if(!ab.length)B2.ctx='';
+ const bF=$('#bForm');bF.classList.toggle('hide',!(ab.length&&TB.ini&&DESK()));bF.textContent=`Formularios (${ab.length}) ›`;$('#bCerT').classList.toggle('hide',!on);if(on)$('#bIni').classList.remove('hide');
+ for(const k of wab)W[k].el.classList.toggle('tbh',!on&&DESK()&&TB.ini);
+ if(!on){c.classList.add('hide');c.innerHTML='';S.classList.add('hide');return}c.classList.remove('hide');S.classList.remove('hide');const N=TB.n;
+ if(TB.last!==B2.ls){const i=ab.indexOf(TB.last);if(i>=0){if(i<B2.off)B2.off=i;if(i>=B2.off+N)B2.off=i-N+1}B2.ls=TB.last}
+ B2.off=Math.max(0,Math.min(B2.off,ab.length-N));const vis=ab.slice(B2.off,B2.off+N),SH=40,hd=document.querySelector('header').offsetHeight,H=innerHeight-hd-SH,GAP=6,NH=Math.min(150,Math.round(H*.2)),cw=Math.floor((innerWidth-(N+1)*GAP)/N);
+ S.style.top=hd+'px';S.style.height=SH+'px';c.style.top=(hd+SH)+'px';const tk=vis.filter(k=>TBK.includes(k)),src=[TB.last,...[...tk].reverse()].find(k=>k&&tk.includes(k)&&tbId(k)),sid=src&&tbId(src),R=sid?rel2(src,sid):null;
+ S.innerHTML=b2Ord().filter(k=>k!=='polv').map(k=>{const v=vis.includes(k);
+  if(ab.includes(k))return`<span class="b2w"><button class="tbt ${v?'on':'hid'}" data-b2ir="${k}" title="${v?'Abierto':'Abierto: tocá para verlo'}">${B2N[k]}</button></span>`;
+  if(TBK.includes(k))return`<span class="b2w"><button class="tbt" data-tp="${k}" title="${R?'Relacionados de '+esc(iniDesc(src,sid)):'Abrí un registro para ver sus relacionados'}">${B2N[k]}${R?` <b>${R[k].size}</b>`:''}</button>${TB.pop===k?tbPop(k,R):''}</span>`;
+  return`<span class="b2w"><button class="tbt" data-b2c="${k}" title="Abrir ${B2N[k].toLowerCase()}">${B2N[k]}</button></span>`}).join('');
+ let x=GAP,h='';
+ for(const k of vis){if(B2W.includes(k)){const el=W[k].el,nt=!!NF[k];el.classList.remove('min','max','tbh');Object.assign(el.style,{left:x+'px',top:(hd+SH+GAP)+'px',width:cw+'px',height:(H-2*GAP-(nt?NH+GAP:0))+'px'});if(nt)h+=tbNotas(k,x,cw,H,NH,GAP)}
+  else h+=`<div class="b2c" data-k="${k}" style="left:${x}px;top:${GAP}px;width:${cw}px;height:${H-2*GAP}px">${b2Pan(k)}</div>`;x+=cw+GAP}
+ for(let i=vis.length;i<N;i++){h+=`<div class="tbl" style="left:${x}px;top:${GAP}px;width:${cw}px;height:${H-2*GAP}px">Espacio libre</div>`;x+=cw+GAP}
+ if(B2.off>0)h+=`<button class="tba" style="left:2px" data-ar2="-1" title="Ver el anterior">‹</button>`;if(B2.off+N<ab.length)h+=`<button class="tba" style="right:2px" data-ar2="1" title="Ver el siguiente">›</button>`;
+ for(const k of wab)vis.includes(k)||W[k].el.classList.add('tbh');c.innerHTML=h}
+const b2F=(l,v)=>v===''||v==null||v===false?'':`<div class="b2f"><span>${l}</span><b>${esc(v)}</b></div>`,b2B=(a,t,ti)=>`<button class="btn sec mini2" data-b2a="${a}" title="${ti||t}">${t}</button>`;
+const b2Gen=(t,r)=>T[t].split(',').filter(f=>!/^id_|^logo$|^fecha_(creacion|modificacion)$/.test(f)).map(f=>b2F(LBL[f]||lindo(f.replace(/_/g,' ')),/^(true|false)$/i.test(r[f])?(si(r[f])?'Sí':'No'):r[f])).join('');
+function b2Pan(k){const s=B2.P[k]||{},hd=t=>`<div class="b2h"><b>${t}</b><span class="sp"></span><button class="ib" data-b2x="${k}" title="Cerrar">✕</button></div>`,h0=hoy(),vig=p=>p&&p.inicio<=h0&&p.fin>=h0&&!anul(p);
+ if(k==='ven'){const V=DB.list('VENDEDORES'),P=DB.list('POLIZAS').filter(vig);return hd('Vendedores')+(V.map(v=>`<div class="b2i"><b>${esc(v.nombre||'')}</b> <small class="muted">${esc(numS(v.comision_pct)||'14')} % · ${P.filter(p=>norm(p.vendedor).trim()===norm(v.nombre).trim()).length} vigentes${/^(false|0)$/i.test(v.activo)?' · inactivo':''}</small>${v.telefono?`<br><small>${esc(v.telefono)}</small>`:''}</div>`).join('')||'<p class="muted">Sin vendedores.</p>')+`<div class="add">${b2B('vened','✏ Editar','Editar vendedores')}${b2B('com','$ Comisiones')}</div>`}
+ if(k==='cia'){const r=s.id&&DB.get('COMPANIAS',s.id);if(!r)return hd('Compañías')+DB.list('COMPANIAS').slice().sort((a,b)=>String(a.nombre).localeCompare(b.nombre,'es')).map(c=>`<div class="b2i" data-b2a="cia:${esc(c.id_compania)}">${esc(c.nombre||'')}</div>`).join('');
+  const cb=DB.list('COBERTURAS').filter(c=>c.id_compania==s.id);return hd(esc(r.nombre||'Compañía'))+b2Gen('COMPANIAS',r)+(cb.length?`<h4>Coberturas (${cb.length})</h4>`+cb.map(c=>`<div class="b2i" data-b2a="cob:${esc(c.id_cobertura)}">${esc(c.nombre||'')} <small class="muted">${esc(c.categoria||'')}</small></div>`).join(''):'')+`<div class="add">${b2B('ciaed','✏ Editar')}${b2B('cia:','Todas')}</div>`}
+ if(k==='cob'){const r=DB.get('COBERTURAS',s.id);return hd('Cobertura')+(r?b2F('Compañía',ciaN(r.id_compania))+b2Gen('COBERTURAS',r)+`<div class="add">${b2B('cobed','✏ Editar')}</div>`:'<p class="muted">No encontré la cobertura.</p>')}
+ if(k==='cum'){const p=DB.get('PERSONAS',s.id);if(!p)return hd('Cumpleaños');const f=prox(p.fecha_nacimiento)||'',ok=+p.ultimo_saludo_anio===+f.slice(0,4);s.m??=msjCumple(p);
+  return hd('Cumpleaños')+b2F('Nombre',nomPer(p))+b2F('Cumple',f&&diaL(f)+' · '+fmtD(f))+b2F('Edad',f&&p.fecha_nacimiento?String(+f.slice(0,4)-+p.fecha_nacimiento.slice(0,4)):'')+b2F('Teléfono',p.telefono)+b2F('Trato',si(p.tutear)?'Informal':'Formal')+b2F('Último saludo',p.ultimo_saludo_fecha?fmtD(p.ultimo_saludo_fecha):p.ultimo_saludo_anio||'nunca')
+   +`<textarea id="b2Msg" rows="6" title="Podés editar el mensaje antes de enviarlo">${esc(s.m)}</textarea><div class="add">${b2B('cwa','✈ WhatsApp')}${b2B('ccp','Copiar')}${b2B('ctj','Tarjeta','Enviar la tarjeta con el mensaje')}${b2B('csa',ok?'↺ Anular saludo':'✓ Saludado')}</div>${ok?'<p class="ok">✓ Ya lo saludaste este año.</p>':''}`}
+ if(k==='polv'){const V=[...rel2('per',s.id).pol.keys()].map(id=>DB.get('POLIZAS',id)).filter(vig);
+  return hd('Pólizas vigentes')+(V.map(p=>`<div class="b2i" data-b2a="pol:${esc(p.id_poliza)}" title="Abrir la póliza"><b>${esc(ciaN(p.id_compania))}</b> · ${esc(p.nro_poliza||'s/n')}<br><small class="muted">${esc(objName(DB.get('OBJETOS',p.id_objeto)))} · hasta ${fmtD(p.fin)}</small></div>`).join('')||'<p class="muted">No tiene pólizas vigentes.</p>')}
+ const p=DB.get('POLIZAS',s.id);if(!p)return hd(B2N[k])+'<p class="muted">Abrí primero una póliza.</p>';const u=ultEnd(p.id_poliza),cab=b2F('Tomador',pNom(p.id_tomador))+b2F('Objeto',objName(DB.get('OBJETOS',p.id_objeto)))+b2F('Compañía',ciaN(p.id_compania))+b2F('Póliza',p.nro_poliza);
+ if(k==='ren'){const sg=DB.list('POLIZAS').find(x=>x.id_poliza_anterior==p.id_poliza);return hd('Renovación')+cab+b2F('Vence',p.fin&&fmtD(p.fin)+' · '+plazo(p.fin))+b2F('Cuota actual',u&&fmtN(u.cuota_monto))+b2F('Forma de pago',p.forma_pago)+b2F('Cobertura',DB.get('COBERTURAS',p.id_cobertura)?.nombre)+b2F('Causa de fin',p.causa_fin)
+  +(sg?`<p class="ok">Ya tiene la siguiente: ${esc(polN(sg))}</p>`:'')+`<div class="add">${b2B('ren','🔄 Renovar')}${b2B('pase','Pase de cía.')}${b2B('nore','No renueva','Cargar la causa de fin')}${b2B('tom','Ver tomador')}</div>`}
+ if(k==='ref')return hd('Refacturación')+cab+b2F('Refactura',u?.cubre_hasta&&fmtD(u.cubre_hasta)+' · '+refPlazo(u.cubre_hasta))+b2F('Endoso actual',u&&'Nº '+u.nro_endoso)+b2F('Cuota actual',u&&fmtN(u.cuota_monto))+b2F('Fin de póliza',fmtD(p.fin))+b2F('Enviar refact.',p.enviar_refacturaciones)+b2F('Informar refact.',p.informar_refacturaciones)+b2F('Forma de pago',p.forma_pago)
+  +`<div class="add">${b2B('adde','+ Endoso nuevo')}${b2B('wa:docum','💬 Documentación')}${b2B('wa:cupones','💬 Cupones')}${b2B('wa:notif','💬 Notificación')}</div>`;
+ if(k==='end'){const es=b2Es(p.id_poliza),e=b2E();if(!e)return hd('Endoso')+cab+'<p class="muted">Sin endosos.</p>'+`<div class="add">${b2B('adde','+ Endoso')}</div>`;const i=es.indexOf(e);
+  return hd('Endoso '+esc(e.nro_endoso))+`<div class="add">${i>0?b2B('eprev','‹ Anterior'):''}${i<es.length-1?b2B('enext','Siguiente ›'):''}</div>`+b2F('Póliza',polN(p))+b2F('Desde',fmtD(e.cubre_desde))+b2F('Hasta',fmtD(e.cubre_hasta))+b2F('SA',fmtN(e.sa))+b2F('GNC',e.gnc_sa&&fmtN(e.gnc_sa))+b2F('Cuota',fmtN(e.cuota_monto))+b2F('Vto. cuota',fmtD(e.vto_cuota))+b2F('Enviado',e.fecha_envio?fmtD(e.fecha_envio):'sin enviar')+b2F('Detalle',e.detalle)
+   +`<div class="add">${b2B('vend','✏ Ver / editar')}${b2B('wend','💬 Enviar')}${e.fecha_envio&&p.fecha_envio?'':b2B('envh','✔ Enviado hoy','Marcar la póliza y este endoso como enviados hoy')}${b2B('adde','+ Endoso')}</div>`}
+ return hd(B2N[k])}
+async function b2Click(e){const b=e.target.closest('[data-b2a],[data-b2x],[data-b2ir],[data-b2c],[data-ar2],[data-tp],[data-ab],[data-nv]');if(!b)return;const d=b.dataset,inS=!!b.closest('#b2S');
+ if(d.b2x){delete B2.P[d.b2x];return tbLay()}
+ if(d.b2ir){const ab=b2Ab(),i=ab.indexOf(d.b2ir);if(i<B2.off)B2.off=i;if(i>=B2.off+TB.n)B2.off=i-TB.n+1;if(B2W.includes(d.b2ir)){TB.last=d.b2ir;B2.ls=d.b2ir}return tbLay()}
+ if(d.ar2){B2.off+=+d.ar2;return tbLay()}if(d.b2c)return b2Abrir(d.b2c);
+ if(inS&&d.tp){TB.pop=TB.pop===d.tp?null:d.tp;return tbLay()}if(inS&&d.ab){TB.pop=null;return abrirK(d.ab,d.id)}
+ if(inS&&d.nv){TB.pop=null;return abrirK(d.nv,null,d.nv==='pol'&&tbId('per')?{id_tomador:tbId('per'),...(tbId('obj')?{id_objeto:tbId('obj')}:{})}:undefined)}
+ if(d.b2a){const[a,v]=d.b2a.split(':');return b2Acc(a,v,b)}}
+function b2Abrir(k){const pol=tbId('pol'),p=pol&&DB.get('POLIZAS',pol),per=tbId('per');
+ if(k==='ven')B2.P.ven={};else if(k==='cia')B2.P.cia={id:p?.id_compania||IS.cia||''};else if(k==='cob'){if(!p?.id_cobertura)return toast('Abrí una póliza que tenga cobertura.');B2.P.cob={id:p.id_cobertura}}
+ else if(k==='cum'){const r=per&&DB.get('PERSONAS',per);if(!r?.fecha_nacimiento)return toast('Abrí una persona con fecha de nacimiento.');B2.P.cum={id:per}}
+ else if(k==='cot')return abrirK('cot',null);
+ else{if(!p)return toast('Abrí primero una póliza.');B2.P[k]={id:pol,...(k==='end'?{e:ultEnd(pol)?.id_endoso}:{})}}
+ TB.last=k;B2.ls='';tbLay()}
+async function b2PolW(id,fn){const ab=W.pol?.el.open&&tbId('pol')==id;if(ab){useW('pol');if(await guardarP(true)!==true)return false}fn();if(ab)await abrirK0('pol',id);return true}
+function b2Sec(t){herCfg();setTimeout(()=>{const l=[...document.querySelectorAll('#vB legend')].find(x=>x.textContent.startsWith(t==='Otros ajustes'?'Cumpleaños':t));l?.scrollIntoView({block:'start'})},60)}
+async function b2Acc(a,v,b){const k=b.closest('.b2c')?.dataset.k,id=B2.P[k]?.id;
+ if(a==='cia'){B2.P.cia={id:v};return tbLay()}if(a==='cob'){B2.P.cob={id:v};TB.last='cob';B2.ls='';return tbLay()}if(a==='pol')return abrirK('pol',v);
+ if(a==='vened')return b2Sec('Vendedores');if(a==='com')return comAbrir();if(a==='ciaed')return abrirCia(id);if(a==='cobed')return abrirCob(id);
+ if(['cwa','ccp','ctj','csa'].includes(a)){const m=$('#b2Msg')?.value||'';IS.hs.cum=id;$('#hMsg').dataset.id=id;$('#hTxt').value=m;if(a==='ccp')return copiar(m);
+  if(a==='cwa')await cumWa(id);if(a==='ctj')await cumTarjeta(id);if(a==='csa'){const p=DB.get('PERSONAS',id);+p.ultimo_saludo_anio===+prox(p.fecha_nacimiento).slice(0,4)?await cumRev(id):(marcarSaludo(id,1),renderIni())}return tbLay()}
+ if(a==='eprev'||a==='enext'){const es=b2Es(id),i=es.indexOf(b2E());B2.P.end.e=es[i+(a==='enext'?1:-1)]?.id_endoso;return tbLay()}
+ if(a==='tom')return abrirK('per',DB.get('POLIZAS',id)?.id_tomador||null);
+ if(a==='nore'){const L=DB.list('LISTAS').filter(l=>l.lista==='causa_fin'&&!/^(false|0)$/i.test(l.activo)).sort((x,y)=>(+x.orden||0)-(+y.orden||0));dlx('dlB2').innerHTML=L.map(l=>`<option value="${esc(l.valor)}">`).join('');
+  const c=await pick('¿Por qué no renueva? (causa de fin)','dlB2');if(!c)return;await b2PolW(id,()=>DB.save('POLIZAS',{...DB.get('POLIZAS',id),causa_fin:c}));renderIni();return tbLay()}
+ if(a==='envh'){const e=b2E();if(await ask(`¿Marcar como enviado hoy (${fmtD(hoy())})?\n\n${pNom(DB.get('POLIZAS',id)?.id_tomador)} · póliza ${DB.get('POLIZAS',id)?.nro_poliza||'s/n'}${e?' · endoso '+e.nro_endoso:''}`,['Marcar','No']))return;
+  await b2PolW(id,()=>{const p=DB.get('POLIZAS',id);if(!p.fecha_envio)DB.save('POLIZAS',{...p,fecha_envio:hoy()});if(e&&!e.fecha_envio)DB.save('ENDOSOS',{...e,fecha_envio:hoy()})});renderIni();return tbLay()}
+ if(['ren','pase','adde','wa','vend','wend'].includes(a)){if(!W.pol?.el.open||tbId('pol')!=id)await abrirK0('pol',id);useW('pol');
+  if(a==='ren')await polRenovar();else if(a==='pase')await polPase();else if(a==='adde'){if(await guardarP(true)!==true)return;abrirE(null)}else if(a==='wa')await waBoton(v);else if(a==='vend')abrirE(b2E()?.id_endoso);else if(a==='wend'&&b2E())await waEnd(b2E().id_endoso);return tbLay()}}
+document.getElementById('tbB').addEventListener('click',e=>{B2.on&&b2Click(e)});
+document.getElementById('tbB').addEventListener('input',e=>{if(e.target.id==='b2Msg'&&B2.P.cum)B2.P.cum.m=e.target.value});
+/* Pendientes: renovaciones, refacturaciones, sin enviar, notas y cumpleaños en una sola lista (más viejo arriba) */
+function b2PenL(L){const o=[],P=id=>DB.get('POLIZAS',id)||{},oc=p=>objName(DB.get('OBJETOS',p.id_objeto))||'s/objeto',cn=p=>ciaN(p.id_compania)||'s/cía.';
+ for(const x of L.ren){const p=P(x.id);o.push({t:'ren',id:x.id,d:p.fin,tx:`Renueva ${oc(p)} en ${cn(p)}`,s:pNom(p.id_tomador)})}
+ for(const x of L.ref){const p=P(x.id);o.push({t:'ref',id:x.id,d:x.s,tx:`Refactura ${oc(p)} en ${cn(p)}`,s:pNom(p.id_tomador)})}
+ for(const x of L.env){const p=P(x.id);o.push({t:'env',id:x.id,d:p.inicio,tx:`Falta enviar ${x.c[1].toLowerCase()}: ${oc(p)} en ${cn(p)}`,s:pNom(p.id_tomador)})}
+ for(const x of L.not)if(!x.fin){const n=DB.get('SEGUIMIENTO',x.id);o.push({t:'not',id:x.id,d:n.fecha_aviso||n.fecha||'',tx:'Nota: '+String(n.texto||'').slice(0,110),s:x.c[2]})}
+ for(const x of L.cum)if(!x.ok)o.push({t:'cum',id:x.id,d:x.f,tx:'Cumpleaños '+x.c[1],s:'Cumple '+x.c[2]});
+ const T5='cum ren ref env not';return o.sort((a,b)=>String(a.d).localeCompare(String(b.d))||T5.indexOf(a.t)-T5.indexOf(b.t))}
+function b2PenR(L){const a=L.pen,h=hoy(),v=a.filter(x=>x.d<h),r=a.filter(x=>!(x.d<h)),f=d=>d?`${d.slice(8,10)}/${d.slice(5,7)}${d.slice(0,4)!==h.slice(0,4)?'/'+d.slice(2,4):''}`:'—',row=x=>`<tr data-pi="${a.indexOf(x)}"><td class="nw">${f(x.d)}</td><td>${B2I[x.t]} ${esc(x.tx)}</td><td class="muted">${esc(x.s||'')}</td></tr>`;
+ $('#hAyu').textContent=a.length?'Todo lo pendiente junto, del más viejo al más nuevo. Tocá un aviso para abrir lo que hace falta.':'No hay nada pendiente.';$('#hMsg').classList.add('hide');$('#hB').innerHTML='';
+ $('#hL').innerHTML='<table class="tb hl b2pen">'+(v.length?`<tr class="b2v" data-b2v="1"><td colspan="3">${B2.vo?'▾':'▸'} Vencidos (${v.length})</td></tr>`+(B2.vo?v.map(row).join(''):''):'')+(r.length?`<tr class="b2hoy"><td colspan="3">Hoy ${f(h)} y próximos</td></tr>`+r.map(row).join(''):'')+'</table>'}
+function b2PenClick(e){const t=e.target.closest('tr');if(!t)return;if(t.dataset.b2v){B2.vo=!B2.vo;return renderHoy()}if(t.dataset.pi!=null)b2Go(HL.pen[+t.dataset.pi])}
+async function b2Go(x){if(!x)return;if(!DESK())return x.t==='cum'?cumFicha(x.id):abrirK(x.t==='not'?'nota':'pol',x.id);
+ await wTodas(true);B2.P={};B2.hl='';TB.ini=false;TB.pop=null;B2.ctx=x.t;
+ if(x.t==='cum'){B2.P.cum={id:x.id};B2.P.polv={id:x.id};await abrirK0('per',x.id)}
+ else if(x.t==='not'){const n=DB.get('SEGUIMIENTO',x.id),k=['rec','sin','pol','obj','per'].find(k=>n[NF[k]]&&DB.get(KT[k],n[NF[k]]));B2.ctx='';if(!k)return abrirK('nota',x.id);B2.hl=x.id;await abrirK0(k,n[NF[k]])}
+ else{const p=DB.get('POLIZAS',x.id);if(!p)return;if(p.id_objeto&&DB.get('OBJETOS',p.id_objeto))await abrirK0('obj',p.id_objeto);await abrirK0('pol',x.id);
+  if(x.t==='ren'){B2.P.ren={id:x.id};if(DB.get('COBERTURAS',p.id_cobertura))B2.P.cob={id:p.id_cobertura}}
+  if(x.t==='ref'){B2.P.end={id:x.id,e:ultEnd(x.id)?.id_endoso};B2.P.ref={id:x.id}}
+  if(x.t==='env'){const es=b2Es(x.id),s=es.find(e=>+e.nro_endoso>0&&!e.fecha_envio)||es[0];B2.P.end={id:x.id,e:s?.id_endoso}}}
+ B2.off=0;B2.ls=TB.last;tbLay()}
+/* Ajustes y arreglo del Inicio en modo B2 */
+function b2Ini(){$('#secSeg').insertAdjacentHTML('beforebegin',`<div id="secB2"><h3>Tablero B2 (prueba)</h3><label class="chk" title="Pendientes en una sola lista, botones en dos filas y formularios en columnas en orden fijo"><input type="checkbox" id="cB2"${B2.on?' checked':''}> Usar el tablero B2</label>${B2.on?`<div>${['Datos del PAS','Vendedores','Listas','Mensajes de WhatsApp','Otros ajustes'].map(t=>`<button class="btn sec" data-b2s="${t}">${t}</button>`).join('')}</div>`:''}</div>`);
+ $('#cB2').onchange=async e=>{localStorage.setItem('pas_b2',e.target.checked?'1':'0');dCfg.close();await wTodas(true);setTimeout(()=>location.reload(),600)};
+ dCfg.querySelectorAll('[data-b2s]').forEach(b=>b.onclick=()=>{dCfg.close();const t=b.dataset.b2s;t==='Listas'?herListas():b2Sec(t)});
+ if(!B2.on)return;IS.tab='pen';{const o={...HT};for(const k in HT)delete HT[k];Object.assign(HT,{pen:'Pendientes'},o)}HAY.pen='Todo lo pendiente junto, del más viejo al más nuevo.';
+ document.body.classList.add('b2');const r1=$('#iq').closest('.tool'),r2=document.querySelector('#vInicio .tool.f2'),keep=['iCpD','iLimp','iEst','iCom','iCfg'].map(i=>$('#'+i));
+ r1.append($('#iNuevo').parentElement,$('#iCot'),r2.querySelector('label.chk'));for(const e of [...r2.children])if(e.matches('span.muted')&&/^(Compañía|Vendedor)$/.test(e.textContent.trim())||['iCia','iCiaV','iVen','iVenV'].includes(e.id))r1.append(e);
+ r2.replaceChildren(...keep);$('#iHer').classList.add('hide');document.querySelector('#vInicio .ihint')?.classList.add('hide');
+ const L={iLimp:'✕ Limpiar',iEst:'📈 Estadísticas',iCom:'$ Facturar',iCfg:'⚙️ Ajustes',iCot:'🧮 Cotizar'};for(const i in L){const b=$('#'+i);b.textContent=L[i];b.classList.remove('ic')}$('#iCom').title='Comisiones de vendedores (facturar)'}
+b2Ini();
 $('#bHoja2').onclick=()=>{dCfg.close();show('vHoja')};
 $('#bUpd').onclick=async()=>{try{for(const r of await navigator.serviceWorker?.getRegistrations()||[])await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch{}location.reload()};
 $('#bSalir').onclick=async()=>{dCfg.close();const n=pendientes(),i=await ask((n?`Hay ${n} cambios sin subir. `:'')+'¿Borro también la copia de este dispositivo?',['Cerrar y borrar la copia','Cerrar y dejar la copia','Cancelar']);
